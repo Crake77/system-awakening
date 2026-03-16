@@ -143,8 +143,11 @@ export default function App() {
   function enterDungeon(rankIdx) {
     if (gs.incursionActive || gs.hp <= 5) return;
     const rank = DUNGEON_RANKS[rankIdx];
-    const mon = generateMonster(rank, 1);
-    setGs(p => ({ ...p, activity: "dungeon", dungeonRank: rankIdx, dungeonFloor: 1, currentMonster: mon, monsterHp: mon.hp, monsterMaxHp: mon.hp, log: [...p.log.slice(-80), `🚪 ${rank}-Rank F1`] }));
+    const best = gs.highestFloors[rank] || 0;
+    // Checkpoint every 5 floors — start at highest cleared checkpoint
+    const startFloor = Math.max(1, Math.floor(best / 5) * 5);
+    const mon = generateMonster(rank, startFloor);
+    setGs(p => ({ ...p, activity: "dungeon", dungeonRank: rankIdx, dungeonFloor: startFloor, currentMonster: mon, monsterHp: mon.hp, monsterMaxHp: mon.hp, monsterEssenceCd: 0, log: [...p.log.slice(-80), `🚪 ${rank}-Rank F${startFloor}`] }));
   }
 
   function leaveDungeon() { setGs(p => ({ ...p, activity: "idle", currentMonster: null })); }
@@ -495,7 +498,7 @@ export default function App() {
                           <button key={rk} onClick={() => ok && enterDungeon(i)} disabled={!ok || gs.hp <= 5}
                             style={{ background: ok ? "#111128" : "#181836", border: `1px solid ${ok ? "#3a3a5e" : "#181828"}`, borderRadius: 5, padding: 5, cursor: ok ? "pointer" : "default", textAlign: "center", opacity: ok ? 1 : 0.3 }}>
                             <div style={{ fontSize: 16, fontWeight: 900, color: ok ? "#0ff" : "#333", fontFamily: "'Orbitron'" }}>{rk}</div>
-                            <div style={{ fontSize: 7, color: "#ccddee" }}>{ok ? `F${gs.highestFloors[rk] || 0}` : "🔒"}</div>
+                            <div style={{ fontSize: 7, color: "#ccddee" }}>{ok ? `▶F${Math.max(1, Math.floor((gs.highestFloors[rk] || 0) / 5) * 5)}` : "🔒"}</div>
                           </button>
                         );
                       })}
@@ -613,7 +616,6 @@ export default function App() {
                               </div>
                             );
                           })}
-                      {gs.lastHit > 0 && <div style={{ fontSize: 9, color: "#f44", fontWeight: 700, marginTop: 2 }}>-{gs.lastHit} HP</div>}
                     </div>
                     <div style={{ ...cell("#0e0a0a", monColor + "66"), borderRadius: "0 0 6px 6px" }}>
                       <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>✦ Essence</div>

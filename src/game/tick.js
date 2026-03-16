@@ -216,7 +216,7 @@ export function gameTick(prev) {
 
   // ═══ COMBAT TIMER ═══
   // One exchange every 1.5 seconds — slow enough to read, fast enough to feel active
-  const COMBAT_INTERVAL = 1.5;
+  const COMBAT_INTERVAL = 3.0;
   let combatReady = false;
   if (s.incursionActive || (s.activity === "dungeon" && s.currentMonster)) {
     s.combatTimer = (s.combatTimer || 0) + 0.5;
