@@ -87,7 +87,7 @@ export default function AuthModal({ onClose }) {
               <input
                 type="text"
                 inputMode="numeric"
-                placeholder="000000"
+                placeholder="00000000"
                 value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 maxLength={8}
