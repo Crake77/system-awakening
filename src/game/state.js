@@ -97,6 +97,7 @@ export function createInitialState(regression) {
 
     // Combat state
     shield: false, lastHit: 0, combatTimer: 0, combatLog: [],
+    monsterEssenceCd: 0,
 
     // UI
     showConfirm: false,

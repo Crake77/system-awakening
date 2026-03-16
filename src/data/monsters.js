@@ -71,12 +71,69 @@ export const MAT_DROPS = {
   S: [["voidstone", 0.70], ["manastone", 0.30]],
 };
 
+// Martial attack names by rank
+const MONSTER_MARTIAL_NAMES = {
+  F: ["Gnaw", "Claw Swipe", "Bite", "Tail Slap", "Lunge"],
+  E: ["Bone Crush", "Dark Slash", "Feral Lunge", "Venom Fang", "Spectral Claw"],
+  D: ["Crushing Slam", "Wyvern Talon", "Bone Shatter", "Dragon Tail", "Phantom Claw"],
+  C: ["Death Strike", "Demon Slash", "Titan Fist", "Mind Crush", "Soul Rend"],
+  B: ["Dragon Claw", "Void Strike", "Phoenix Burst", "Kraken Crush", "Arch Surge"],
+  A: ["Sovereign Strike", "Void Rend", "World Cleave", "Horror Touch", "Divine Wrath"],
+  S: ["God Fist", "Emperor's Wrath", "World Shatter", "Entropy Crush", "Tyrant's Rage"],
+};
+
+// Essence skills monsters can have — assigned based on rank/floor/boss
+const MONSTER_ESSENCE_POOL = {
+  // E rank bosses
+  venomSpew:      { name: "Venom Spew",      type: "cooldown",  cooldown: 4, dmgMult: 1.4 },
+  // D rank
+  feralSurge:     { name: "Feral Surge",      type: "hp_below",  threshold: 0.5, cooldown: 5, dmgMult: 1.8 },
+  darkPulse:      { name: "Dark Pulse",       type: "cooldown",  cooldown: 4, dmgMult: 1.6 },
+  // C rank
+  deathCoil:      { name: "Death Coil",       type: "hp_below",  threshold: 0.4, cooldown: 6, dmgMult: 2.4 },
+  shadowBlast:    { name: "Shadow Blast",     type: "cooldown",  cooldown: 5, dmgMult: 2.0 },
+  // B rank
+  voidSurge:      { name: "Void Surge",       type: "cooldown",  cooldown: 5, dmgMult: 2.5 },
+  rampage:        { name: "Rampage",          type: "hp_below",  threshold: 0.4, cooldown: 4, dmgMult: 3.0 },
+  // A–S rank
+  calamityStrike: { name: "Calamity Strike",  type: "cooldown",  cooldown: 6, dmgMult: 3.2 },
+  worldRend:      { name: "World Rend",       type: "hp_below",  threshold: 0.35, cooldown: 5, dmgMult: 4.0 },
+};
+
+// Pick essence skill(s) for a monster — higher rank/boss = more likely / stronger
+function pickMonsterEssenceSkill(rank, floor, isBoss) {
+  const roll = Math.random();
+  const rankIdx = ["F", "E", "D", "C", "B", "A", "S"].indexOf(rank);
+  // Base chance: F=0%, E boss=40%, D=25%/boss=70%, C+=always on boss
+  if (rank === "F") return null;
+  if (rank === "E") return isBoss && roll < 0.5 ? MONSTER_ESSENCE_POOL.venomSpew : null;
+  if (rank === "D") {
+    if (isBoss) return roll < 0.5 ? MONSTER_ESSENCE_POOL.feralSurge : MONSTER_ESSENCE_POOL.darkPulse;
+    return roll < 0.25 + floor * 0.01 ? MONSTER_ESSENCE_POOL.darkPulse : null;
+  }
+  if (rank === "C") {
+    if (isBoss) return roll < 0.5 ? MONSTER_ESSENCE_POOL.deathCoil : MONSTER_ESSENCE_POOL.shadowBlast;
+    return roll < 0.35 + floor * 0.01 ? MONSTER_ESSENCE_POOL.shadowBlast : null;
+  }
+  if (rank === "B") {
+    if (isBoss) return roll < 0.5 ? MONSTER_ESSENCE_POOL.rampage : MONSTER_ESSENCE_POOL.voidSurge;
+    return MONSTER_ESSENCE_POOL.voidSurge;
+  }
+  // A, S — always have one
+  if (isBoss) return roll < 0.5 ? MONSTER_ESSENCE_POOL.worldRend : MONSTER_ESSENCE_POOL.calamityStrike;
+  return MONSTER_ESSENCE_POOL.calamityStrike;
+}
+
 // Generate a monster for a given rank and floor
 export function generateMonster(rank, floor) {
   const s = RANK_SCALING[rank];
   const nameIdx = Math.floor((floor - 1) / 2) % MONSTER_NAMES[rank].length;
   const isBoss = floor % 5 === 0;
   const bossMultiplier = isBoss ? 2.5 : 1;
+
+  const martialNames = MONSTER_MARTIAL_NAMES[rank];
+  const martialName = martialNames[Math.floor(Math.random() * martialNames.length)];
+  const essenceSkill = pickMonsterEssenceSkill(rank, floor, isBoss);
 
   return {
     name: (isBoss ? "⚔ " : "") + MONSTER_NAMES[rank][nameIdx],
@@ -88,6 +145,8 @@ export function generateMonster(rank, floor) {
     essence: Math.floor((s.essBase + s.essScale * floor) * (isBoss ? 4 : 1)),
     isBoss,
     rank,
+    martialName,
+    essenceSkill,
   };
 }
 

@@ -48,11 +48,32 @@ const TABS = [
 const ACTIVITY_COLORS = { idle: "#444", dungeon: "#f44", meditating: "#a6f", working: "#fc0" };
 const ACTIVITY_LABELS = { idle: "Idle", dungeon: "Dungeon", meditating: "Meditating", working: "Working" };
 
+// Migrate old saves to new skill system
+function migrateState(s) {
+  if (!s.martialSkills) {
+    s.martialSkills = { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } };
+    s.equippedMartialSkills = ["basicMartialArts"];
+    s.martialSlots = 1;
+  }
+  if (!s.essenceSkills) {
+    s.essenceSkills = { essenceStrike: { level: 1, exp: 0, expToNext: 60 } };
+    s.equippedEssenceSkills = ["essenceStrike"];
+    s.essenceSlots = 1;
+    s.essenceCooldowns = { essenceStrike: 0 };
+  }
+  // Clean up removed old-system fields
+  if (s.skills) {
+    ["basicAttack", "powerStrike", "manaShield", "flameBurst"].forEach(k => delete s.skills[k]);
+  }
+  delete s.activeSkill; delete s.skillSlots; delete s.equippedSkills;
+  return s;
+}
+
 export default function App() {
   // Initialize from save or fresh
   const [gs, setGs] = useState(() => {
     const saved = loadGame();
-    return saved || createInitialState(null);
+    return saved ? migrateState(saved) : createInitialState(null);
   });
   const [user, setUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1250,10 +1271,17 @@ export default function App() {
                 return (
                   <Sec title={`⚔️ Martial Skills (${equipped.length}/${slots})`} color="#f80">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>All equipped slots fire every round — later hits get a combo bonus.</div>
-                    {equipped.map((skillId, slotIdx) => {
-                      const def = MARTIAL_SKILLS[skillId];
-                      const st = (gs.martialSkills || {})[skillId];
-                      if (!def || !st) return null;
+                    {Array.from({ length: slots }).map((_, slotIdx) => {
+                      const skillId = equipped[slotIdx];
+                      const def = skillId ? MARTIAL_SKILLS[skillId] : null;
+                      const st = skillId ? ((gs.martialSkills || {})[skillId] || { level: 1, exp: 0, expToNext: 50 }) : null;
+                      if (!def || !st) return (
+                        <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
+                          <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
+                          <span style={{ fontSize: 9, color: "#8899cc", flex: 1 }}>— Empty —</span>
+                          <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#f80" small>🛒 Shop</Btn>
+                        </div>
+                      );
                       const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
                       const lvData = def.levels[lvIdx];
                       const comboBonus = slotIdx > 0 ? `+${slotIdx * 30}% combo` : "lead hit";
@@ -1304,10 +1332,17 @@ export default function App() {
                 return (
                   <Sec title={`✦ Essence Skills (${equipped.length}/${slots})`} color="#a6f">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>Auto-trigger when conditions are met. Drain combat energy.</div>
-                    {equipped.map((skillId, slotIdx) => {
-                      const def = ESSENCE_SKILLS[skillId];
-                      const st = (gs.essenceSkills || {})[skillId];
-                      if (!def || !st) return null;
+                    {Array.from({ length: slots }).map((_, slotIdx) => {
+                      const skillId = equipped[slotIdx];
+                      const def = skillId ? ESSENCE_SKILLS[skillId] : null;
+                      const st = skillId ? ((gs.essenceSkills || {})[skillId] || { level: 1, exp: 0, expToNext: 60 }) : null;
+                      if (!def || !st) return (
+                        <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
+                          <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
+                          <span style={{ fontSize: 9, color: "#8899cc", flex: 1 }}>— Empty —</span>
+                          <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#a6f" small>🛒 Shop</Btn>
+                        </div>
+                      );
                       const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
                       const lvData = def.levels[lvIdx];
                       const t = lvData.trigger;

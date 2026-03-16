@@ -390,19 +390,40 @@ export function gameTick(prev) {
       }
     });
 
-    // Monster attacks player
+    // Monster martial attack
+    s.monsterEssenceCd = Math.max(0, (s.monsterEssenceCd || 0) - 1.5);
     if (Math.random() * 100 > getDodge(s)) {
       let monDmg = Math.max(1, mon.dmg - getDef(s));
       const blocked = s.shield;
       if (s.shield) { monDmg = Math.floor(monDmg * 0.2); s.shield = false; }
       s.hp -= monDmg;
       s.lastHit = monDmg;
+      const attackName = mon.martialName || "Strike";
       s.combatLog = [...s.combatLog.slice(-11), blocked
-        ? `🛡 Shield absorbs ${mon.name}'s attack — ${monDmg} dmg`
-        : `💥 ${mon.name} strikes you for ${monDmg} dmg`];
+        ? `🛡 Shield absorbs ${mon.name}'s ${attackName} — ${monDmg} dmg`
+        : `💥 ${mon.name}: ${attackName} — ${monDmg} dmg`];
     } else {
       s.lastHit = 0;
       s.combatLog = [...s.combatLog.slice(-11), `💨 You dodge ${mon.name}'s attack!`];
+    }
+
+    // Monster essence skill
+    if (mon.essenceSkill && s.monsterHp > 0) {
+      const esk = mon.essenceSkill;
+      let esFires = false;
+      if (esk.type === "cooldown" && s.monsterEssenceCd <= 0) esFires = true;
+      else if (esk.type === "hp_below" && s.monsterEssenceCd <= 0 && s.monsterHp / s.monsterMaxHp < esk.threshold) esFires = true;
+      if (esFires) {
+        s.monsterEssenceCd = esk.cooldown || 4;
+        if (Math.random() * 100 > getDodge(s)) {
+          const esDmg = Math.max(1, Math.floor(mon.dmg * esk.dmgMult) - getDef(s));
+          s.hp -= esDmg;
+          s.lastHit = Math.max(s.lastHit, esDmg);
+          s.combatLog = [...s.combatLog.slice(-11), `✦ ${mon.name}: ${esk.name} — ${esDmg} dmg!`];
+        } else {
+          s.combatLog = [...s.combatLog.slice(-11), `💨 You dodge ${mon.name}'s ${esk.name}!`];
+        }
+      }
     }
 
     // Player dies
@@ -455,7 +476,9 @@ export function gameTick(prev) {
       s.currentMonster = nextMon;
       s.monsterHp = nextMon.hp;
       s.monsterMaxHp = nextMon.hp;
-      s.combatLog = [`⚔ ${nextMon.name} appears! HP: ${nextMon.hp}`];
+      s.monsterEssenceCd = 0;
+      const eLabel = nextMon.essenceSkill ? ` ✦ ${nextMon.essenceSkill.name}` : "";
+      s.combatLog = [`⚔ ${nextMon.name} appears! HP: ${nextMon.hp}${eLabel}`];
     }
   }
 
