@@ -45,14 +45,19 @@ export function createInitialState(regression) {
     weapon: "w0", armor: "a0", accessory: "ac0",
     ownedWeapons: ["w0"], ownedArmors: ["a0"], ownedAccessories: ["ac0"],
 
-    // Skills
-    // skillSlots: how many active skill slots are open (default 1)
-    // equippedSkills: which active skills are slotted (max = skillSlots)
-    // Passive skills (windStep, ironBody) are always active when learned — no slot needed
-    skills: { basicAttack: { level: 1, exp: 0, expToNext: 50 } },
-    activeSkill: "basicAttack",
-    skillSlots: 1,
-    equippedSkills: ["basicAttack"],
+    // Passive skills (windStep, ironBody) — tracked here when purchased from shop
+    skills: {},
+
+    // Martial Skills — all equipped slots fire every combat round (combo)
+    martialSkills: { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } },
+    equippedMartialSkills: ["basicMartialArts"],
+    martialSlots: 1,
+
+    // Essence Skills — auto-trigger by condition, drain combat energy
+    essenceSkills: { essenceStrike: { level: 1, exp: 0, expToNext: 60 } },
+    equippedEssenceSkills: ["essenceStrike"],
+    essenceSlots: 1,
+    essenceCooldowns: { essenceStrike: 0 },
 
     // Activity: "idle" | "dungeon" | "meditating" | "working"
     activity: "idle",

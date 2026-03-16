@@ -2,12 +2,12 @@
 // Separated from UI so it's easy to modify game logic without touching components
 
 import { generateMonster, rollDrops, generateIncursionBoss, DUNGEON_RANKS, FLOORS_PER_RANK } from '../data/monsters.js';
-import { SKILL_DEFINITIONS } from '../data/skills.js';
+import { SKILL_DEFINITIONS, MARTIAL_SKILLS, ESSENCE_SKILLS } from '../data/skills.js';
 import { JOBS, getActiveRecipe, getJobXpNeeded } from '../data/jobs.js';
 import { DAY_SECONDS, FOOD_DAILY_COST, INCURSION_BASE_TIMER } from '../data/regression.js';
 import { createInitialState } from './state.js';
 import {
-  getMaxHp, getMaxCombatEnergy, getMatCap, getPoolMax, getRefinedCap,
+  getMaxHp, getMaxCombatEnergy, getCombatEnergyRegen, getMatCap, getPoolMax, getRefinedCap,
   getRestRate, corePassiveRate, getProcessingRate,
   getAtk, getDef, getDodge, getJobMultiplier,
   getRent, hasMats, subtractMats, addMats, regLevel, calcRegressionPts,
@@ -41,7 +41,7 @@ export function gameTick(prev) {
   // ═══ PASSIVE REST (always when not in dungeon) ═══
   if (s.activity !== "dungeon") {
     s.hp = Math.min(s.maxHp, s.hp + getRestRate(s) * 0.5);
-    s.combatEnergy = Math.min(s.maxCombatEnergy, s.combatEnergy + 0.5);
+    s.combatEnergy = Math.min(s.maxCombatEnergy, s.combatEnergy + getCombatEnergyRegen(s) * 0.5);
   }
 
   // ═══ CORE PASSIVE (always generates raw essence) ═══
@@ -192,6 +192,18 @@ export function gameTick(prev) {
     return newState;
   }
 
+  // ═══ ESSENCE COOLDOWN DECAY (every tick) ═══
+  if (s.essenceCooldowns) {
+    const cds = {};
+    let changed = false;
+    Object.entries(s.essenceCooldowns).forEach(([k, v]) => {
+      const nv = Math.max(0, v - 0.5);
+      cds[k] = nv;
+      if (nv !== v) changed = true;
+    });
+    if (changed) s.essenceCooldowns = cds;
+  }
+
   // ═══ COMBAT TIMER ═══
   // One exchange every 1.5 seconds — slow enough to read, fast enough to feel active
   const COMBAT_INTERVAL = 1.5;
@@ -209,12 +221,32 @@ export function gameTick(prev) {
   // ═══ INCURSION COMBAT ═══
   if (combatReady && s.incursionActive && !s.incursionWon) {
     const boss = generateIncursionBoss(s.regression.count);
-    let playerDmg = getAtk(s);
-    const skill = SKILL_DEFINITIONS[s.activeSkill];
-    if (skill && skill.type === "active" && skill.energyCost > 0 && s.combatEnergy >= skill.energyCost) {
-      playerDmg = Math.floor(playerDmg * skill.dmgMult);
-      s.combatEnergy -= skill.energyCost;
-    }
+    // Martial combo damage
+    let playerDmg = 0;
+    (s.equippedMartialSkills || ["basicMartialArts"]).forEach((skillId, idx) => {
+      const def = MARTIAL_SKILLS[skillId];
+      const st = (s.martialSkills || {})[skillId];
+      if (!def || !st) return;
+      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+      playerDmg += Math.floor(getAtk(s) * lvData.dmgMult * (1 + idx * 0.3));
+    });
+    if (playerDmg === 0) playerDmg = getAtk(s);
+    // Essence skills
+    (s.equippedEssenceSkills || []).forEach(skillId => {
+      const def = ESSENCE_SKILLS[skillId];
+      const st = (s.essenceSkills || {})[skillId];
+      if (!def || !st) return;
+      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+      const cdLeft = (s.essenceCooldowns || {})[skillId] || 0;
+      const t = lvData.trigger;
+      const condMet = t.type === "cooldown" ? cdLeft <= 0 : (cdLeft <= 0 && s.hp / s.maxHp < t.threshold);
+      if (condMet && s.combatEnergy >= lvData.energyCost) {
+        s.combatEnergy -= lvData.energyCost;
+        s.essenceCooldowns = { ...(s.essenceCooldowns || {}), [skillId]: t.type === "cooldown" ? t.seconds : (t.cooldown || 4) };
+        if (lvData.dmgMult) playerDmg += Math.floor(getAtk(s) * lvData.dmgMult);
+        if (lvData.healPct) s.hp = Math.min(s.maxHp, s.hp + Math.floor(s.maxHp * lvData.healPct));
+      }
+    });
     s.incursionBossHp = Math.max(0, s.incursionBossHp - playerDmg);
 
     // Boss attacks
@@ -248,65 +280,104 @@ export function gameTick(prev) {
   if (combatReady && s.activity === "dungeon" && s.currentMonster && !s.incursionActive) {
     const mon = s.currentMonster;
 
-    // Guard: activeSkill must be in equippedSkills (handles old saves / edge cases)
-    const equipped = s.equippedSkills || ["basicAttack"];
-    if (!equipped.includes(s.activeSkill)) s.activeSkill = equipped[0] || "basicAttack";
+    // ── MARTIAL SKILLS: all equipped slots fire in sequence (combo) ──
+    const equippedMartial = s.equippedMartialSkills || ["basicMartialArts"];
+    let totalMartialDmg = 0;
+    const martialHits = [];
 
-    let playerDmg = getAtk(s);
-    const skill = SKILL_DEFINITIONS[s.activeSkill];
-    let skillFired = false;
+    equippedMartial.forEach((skillId, idx) => {
+      const def = MARTIAL_SKILLS[skillId];
+      const st = (s.martialSkills || {})[skillId];
+      if (!def || !st) return;
+      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+      const comboMult = 1 + idx * 0.3; // +30% per successive hit in combo
+      let dmg = Math.floor(getAtk(s) * lvData.dmgMult * comboMult);
+      const dodged = Math.random() * 100 < (mon.dodge || 0);
+      if (dodged) dmg = 0;
+      else dmg = Math.max(1, dmg - (mon.def || 0));
+      totalMartialDmg += dmg;
+      martialHits.push({ name: lvData.name, dmg, dodged });
 
-    if (skill && skill.type === "active") {
-      if (skill.energyCost === 0) {
-        // Zero-cost skills (basicAttack) always fire
-        skillFired = true;
-      } else if (s.combatEnergy >= skill.energyCost) {
-        s.combatEnergy -= skill.energyCost;
-        if (s.activeSkill === "manaShield") {
-          s.shield = true;
+      // Martial skill exp
+      const ms = { ...(s.martialSkills[skillId] || { level: 1, exp: 0, expToNext: def.expBase || 50 }) };
+      ms.exp += 1;
+      if (ms.exp >= ms.expToNext) {
+        if (ms.level < def.levels.length) {
+          ms.level += 1;
+          ms.exp = 0;
+          ms.expToNext = Math.floor(ms.expToNext * 1.5);
+          s.log = [...s.log.slice(-80), `⬆ ${def.name} → ${def.levels[ms.level - 1].name} (Lv.${ms.level})`];
         } else {
-          playerDmg = Math.floor(playerDmg * skill.dmgMult);
+          ms.exp = ms.expToNext;
         }
-        skillFired = true;
       }
-    }
-    // Monster dodge check
-    const monDodged = Math.random() * 100 < (mon.dodge || 0);
-    if (monDodged) playerDmg = 0;
-    // Monster DEF reduces player damage
-    if (playerDmg > 0) playerDmg = Math.max(1, playerDmg - (mon.def || 0));
-    s.monsterHp -= playerDmg;
+      s.martialSkills = { ...s.martialSkills, [skillId]: ms };
+    });
 
-    // Combat log — player action
-    {
-      const sk = SKILL_DEFINITIONS[s.activeSkill];
-      let entry;
-      if (monDodged) {
-        entry = `🗡 ${sk?.name || "Attack"} — ${mon.name} dodged!`;
-      } else if (sk && sk.energyCost > 0 && skillFired) {
-        entry = `🗡 ${sk.name} hits ${mon.name} for ${playerDmg} dmg`;
-      } else {
-        entry = `🗡 You strike ${mon.name} for ${playerDmg} dmg`;
-      }
-      s.combatLog = [...s.combatLog.slice(-11), entry];
+    s.monsterHp -= totalMartialDmg;
+
+    // Martial combat log
+    if (martialHits.length === 1) {
+      const h = martialHits[0];
+      s.combatLog = [...s.combatLog.slice(-11), h.dodged ? `🗡 ${h.name} — dodged!` : `🗡 ${h.name}: ${h.dmg} dmg`];
+    } else {
+      const parts = martialHits.map(h => h.dodged ? "✗" : String(h.dmg)).join("→");
+      s.combatLog = [...s.combatLog.slice(-11), `🗡 Combo [${parts}] = ${totalMartialDmg} dmg`];
     }
 
-    // Skill experience — fires whenever the skill was actually used
-    if (s.skills[s.activeSkill] && skillFired) {
-      const skillState = { ...s.skills[s.activeSkill] };
-      skillState.exp += 1;
-      if (skillState.exp >= skillState.expToNext) {
-        skillState.level += 1;
-        skillState.exp = 0;
-        skillState.expToNext = Math.floor(skillState.expToNext * 1.5);
-        s.log = [...s.log.slice(-80), `⬆ ${SKILL_DEFINITIONS[s.activeSkill]?.name} Lv.${skillState.level}`];
-      }
-      s.skills = { ...s.skills, [s.activeSkill]: skillState };
-    }
+    // ── ESSENCE SKILLS: auto-trigger by condition ──
+    const equippedEssence = s.equippedEssenceSkills || [];
+    equippedEssence.forEach(skillId => {
+      const def = ESSENCE_SKILLS[skillId];
+      const st = (s.essenceSkills || {})[skillId];
+      if (!def || !st) return;
+      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+      const trigger = lvData.trigger;
+      const cdLeft = (s.essenceCooldowns || {})[skillId] || 0;
 
-    // Passive skill exp
+      let shouldFire = false;
+      if (trigger.type === "cooldown" && cdLeft <= 0) shouldFire = true;
+      else if (trigger.type === "hp_below" && cdLeft <= 0 && s.hp / s.maxHp < trigger.threshold) shouldFire = true;
+
+      if (shouldFire && s.combatEnergy >= lvData.energyCost) {
+        s.combatEnergy -= lvData.energyCost;
+        const newCd = trigger.type === "cooldown" ? trigger.seconds : (trigger.cooldown || 4);
+        s.essenceCooldowns = { ...(s.essenceCooldowns || {}), [skillId]: newCd };
+
+        if (lvData.healPct) {
+          const heal = Math.floor(s.maxHp * lvData.healPct);
+          s.hp = Math.min(s.maxHp, s.hp + heal);
+          s.combatLog = [...s.combatLog.slice(-11), `💚 ${lvData.name}: +${heal} HP`];
+        } else if (lvData.dmgMult) {
+          let dmg = Math.floor(getAtk(s) * lvData.dmgMult);
+          const dodged = Math.random() * 100 < (mon.dodge || 0);
+          if (dodged) dmg = 0;
+          else dmg = Math.max(1, dmg - (mon.def || 0));
+          s.monsterHp -= dmg;
+          s.combatLog = [...s.combatLog.slice(-11), dodged ? `✦ ${lvData.name} — dodged!` : `✦ ${lvData.name}: ${dmg} dmg`];
+        }
+
+        // Essence skill exp
+        const es = { ...(s.essenceSkills[skillId] || { level: 1, exp: 0, expToNext: def.expBase || 60 }) };
+        es.exp += 1;
+        if (es.exp >= es.expToNext) {
+          if (es.level < def.levels.length) {
+            const prevName = def.levels[es.level - 1].name;
+            es.level += 1;
+            es.exp = 0;
+            es.expToNext = Math.floor(es.expToNext * 1.5);
+            s.log = [...s.log.slice(-80), `⬆ ${def.name} → ${def.levels[es.level - 1].name} (Lv.${es.level})`];
+          } else {
+            es.exp = es.expToNext;
+          }
+        }
+        s.essenceSkills = { ...s.essenceSkills, [skillId]: es };
+      }
+    });
+
+    // Passive skill exp (windStep, ironBody)
     ["windStep", "ironBody"].forEach(skillId => {
-      if (s.skills[skillId]) {
+      if (s.skills?.[skillId]) {
         const ps = { ...s.skills[skillId] };
         ps.exp += 0.3;
         if (ps.exp >= ps.expToNext) {
@@ -326,10 +397,9 @@ export function gameTick(prev) {
       if (s.shield) { monDmg = Math.floor(monDmg * 0.2); s.shield = false; }
       s.hp -= monDmg;
       s.lastHit = monDmg;
-      const entry = blocked
+      s.combatLog = [...s.combatLog.slice(-11), blocked
         ? `🛡 Shield absorbs ${mon.name}'s attack — ${monDmg} dmg`
-        : `💥 ${mon.name} strikes you for ${monDmg} dmg`;
-      s.combatLog = [...s.combatLog.slice(-11), entry];
+        : `💥 ${mon.name} strikes you for ${monDmg} dmg`];
     } else {
       s.lastHit = 0;
       s.combatLog = [...s.combatLog.slice(-11), `💨 You dodge ${mon.name}'s attack!`];

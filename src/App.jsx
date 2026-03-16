@@ -6,7 +6,13 @@ import { DUNGEON_RANKS, FLOORS_PER_RANK, MATERIALS, MAT_ICONS, MAT_LABELS, gener
 import { WEAPONS, ARMORS, ACCESSORIES, getWeapon, getArmor, getAccessory } from './data/equipment.js';
 import { MED_TECH_COSTS, CORE_TIERS, CORE_UNLOCK_POOL_CAP, BODY_TECHNIQUES, bodyTechEssCost, poolExpandCost, POOL_EXPAND_AMOUNT } from './data/cultivation.js';
 import { MERIDIAN_MANUALS, getManual, rollMeridianGrant } from './data/meridianManuals.js';
-import { SKILL_DEFINITIONS, SKILL_MANUALS, SKILL_SLOT_COSTS, MAX_SKILL_SLOTS } from './data/skills.js';
+import {
+  SKILL_DEFINITIONS, SKILL_MANUALS,
+  MARTIAL_SKILLS, ESSENCE_SKILLS,
+  MARTIAL_MANUALS, ESSENCE_MANUALS,
+  MARTIAL_SLOT_COSTS, ESSENCE_SLOT_COSTS,
+  MAX_MARTIAL_SLOTS, MAX_ESSENCE_SLOTS,
+} from './data/skills.js';
 import { HOUSING, BEDS, RESIDENCE_UPGRADES } from './data/housing.js';
 import { JOBS, HIRES, getActiveRecipe, getJobXpNeeded } from './data/jobs.js';
 import { PILLS } from './data/pills.js';
@@ -545,14 +551,25 @@ export default function App() {
                     {/* ROW 6 — Footer info */}
                     <div style={{ ...cell("#181838", "#1a3a5e"), borderRadius: "0 0 6px 6px" }}>
                       {(() => {
-                        const sk = SKILL_DEFINITIONS[gs.activeSkill];
-                        const skState = gs.skills[gs.activeSkill];
-                        return sk ? (
-                          <div style={{ fontSize: 8, color: "#f80" }}>
-                            {sk.icon} {sk.name}{skState ? ` Lv.${skState.level}` : ""}
-                            {sk.energyCost > 0 ? <span style={{ color: "#bbccee", marginLeft: 3 }}>{sk.energyCost}EN</span> : null}
+                        const martial = (gs.equippedMartialSkills || ["basicMartialArts"]).map(id => {
+                          const def = MARTIAL_SKILLS[id]; const st = (gs.martialSkills || {})[id];
+                          if (!def || !st) return null;
+                          const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                          return `${def.icon} ${def.levels[lv].name}`;
+                        }).filter(Boolean).join(" → ");
+                        const essence = (gs.equippedEssenceSkills || []).map(id => {
+                          const def = ESSENCE_SKILLS[id]; const st = (gs.essenceSkills || {})[id];
+                          if (!def || !st) return null;
+                          const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                          const cd = (gs.essenceCooldowns || {})[id] || 0;
+                          return `${def.icon} ${def.levels[lv].name}${cd > 0 ? ` (${cd.toFixed(1)}s)` : " ✓"}`;
+                        }).filter(Boolean).join("  ");
+                        return (
+                          <div>
+                            <div style={{ fontSize: 8, color: "#f80" }}>{martial}</div>
+                            {essence ? <div style={{ fontSize: 7, color: "#a6f", marginTop: 1 }}>{essence}</div> : null}
                           </div>
-                        ) : null;
+                        );
                       })()}
                       {gs.lastHit > 0 ? <div style={{ fontSize: 10, color: "#f44", fontWeight: 700, marginTop: 2 }}>-{gs.lastHit} HP</div> : <div style={{ height: 14 }} />}
                     </div>
@@ -879,7 +896,7 @@ export default function App() {
                     { label: "STR", val: str, base: gs.baseStr, cult: gs.cultStr || 0, color: "#f84", effect: `→ ATK +${(str * 0.5).toFixed(1)}` },
                     { label: "VIT", val: vit, base: gs.baseVit, cult: gs.cultVit || 0, color: "#e44", effect: `→ HP +${(vit * 5).toFixed(0)}, DEF +${(vit * 0.3).toFixed(1)}` },
                     { label: "AGI", val: agi, base: gs.baseAgi, cult: gs.cultAgi || 0, color: "#0f0", effect: `→ Dodge +${(agi * 0.2).toFixed(1)}%` },
-                    { label: "INT", val: int_, base: gs.baseInt, cult: gs.cultInt || 0, color: "#48f", effect: "→ Cultivation (future skills)" },
+                    { label: "INT", val: int_, base: gs.baseInt, cult: gs.cultInt || 0, color: "#48f", effect: "→ Combat energy pool size" },
                     { label: "WIS", val: wis, base: gs.baseWis, cult: gs.cultWis || 0, color: "#a6f", effect: "→ Essence insight (future)" },
                   ].map(({ label, val, base, cult, color, effect }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
@@ -902,7 +919,7 @@ export default function App() {
                     { label: "Defense",       val: def, color: "#08f", desc: "Reduces damage taken each hit. Min 1 damage." },
                     { label: "Dodge",         val: dodge.toFixed(1) + "%", color: "#0f0", desc: "Chance to avoid a hit entirely. Capped at 50%." },
                     { label: "Max HP",        val: gs.maxHp, color: "#e44", desc: "Total health. Reaching 0 ends the dungeon run." },
-                    { label: "Combat Energy", val: gs.maxCombatEnergy, color: "#48f", desc: "Fuel for active skills. Refills while resting." },
+                    { label: "Combat Energy", val: gs.maxCombatEnergy, color: "#48f", desc: "Fuel for essence skills. INT = pool size, WIS = regen speed." },
                   ].map(({ label, val, color, desc }) => (
                     <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
@@ -1027,24 +1044,29 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Skill manuals */}
-                {Object.keys(gs.skills).filter(id => id !== "basicAttack").length > 0 && (
-                  <div>
-                    <div style={{ fontSize: 8, color: "#a6f", marginBottom: 3 }}>📜 Combat Skills</div>
-                    {Object.keys(gs.skills).filter(id => id !== "basicAttack").map(id => {
-                      const def2 = SKILL_DEFINITIONS[id];
-                      const sk = gs.skills[id];
-                      return (
+                {/* Combat skills summary */}
+                {(() => {
+                  const extraMartial = Object.keys(gs.martialSkills || {}).filter(id => id !== "basicMartialArts");
+                  const allEssence = Object.keys(gs.essenceSkills || {});
+                  const passives = Object.keys(gs.skills || {});
+                  if (extraMartial.length + allEssence.length + passives.length === 0) return null;
+                  return (
+                    <div>
+                      <div style={{ fontSize: 8, color: "#a6f", marginBottom: 3 }}>📜 Combat Skills</div>
+                      {[...extraMartial.map(id => ({ id, def: MARTIAL_SKILLS[id], st: (gs.martialSkills || {})[id], color: "#f80" })),
+                        ...allEssence.map(id => ({ id, def: ESSENCE_SKILLS[id], st: (gs.essenceSkills || {})[id], color: "#a6f" })),
+                        ...passives.map(id => ({ id, def: SKILL_DEFINITIONS[id], st: (gs.skills || {})[id], color: "#8af" })),
+                      ].map(({ id, def, st, color }) => def && st ? (
                         <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
-                          <span style={{ fontSize: 9, color: "#a6f" }}>{def2?.icon} {def2?.name}</span>
-                          <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{sk.level}</span>
+                          <span style={{ fontSize: 9, color }}>{def.icon} {def.name}</span>
+                          <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{st.level}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      ) : null)}
+                    </div>
+                  );
+                })()}
 
-                {(gs.ownedMeridianManuals || ["wanderer"]).length <= 1 && Object.keys(gs.ownedBodyTechs || {}).length === 0 && Object.keys(gs.skills).filter(id => id !== "basicAttack").length === 0 && (
+                {(gs.ownedMeridianManuals || ["wanderer"]).length <= 1 && Object.keys(gs.ownedBodyTechs || {}).length === 0 && Object.keys(gs.skills || {}).length === 0 && Object.keys(gs.martialSkills || { basicMartialArts: {} }).length <= 1 && (
                   <div style={{ fontSize: 9, color: "#aabbee" }}>No additional manuals yet. Visit the Shop.</div>
                 )}
               </Sec>
@@ -1138,24 +1160,62 @@ export default function App() {
                 })}
               </Sec>
 
-              <Sec title="📖 Combat Skills">
+              <Sec title="⚔️ Martial Schools">
+                {MARTIAL_MANUALS.map(m => {
+                  const def = MARTIAL_SKILLS[m.skill];
+                  const owned = !!(gs.martialSkills || {})[m.skill];
+                  return (
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                      <div>
+                        <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{def?.icon} {def?.name}</span>
+                        <span style={{ fontSize: 7, color: "#8899cc", marginLeft: 4 }}>10 levels · combo ready</span>
+                        {Object.keys(m.mats).length > 0 && <span style={{ marginLeft: 3 }}><MatCost mats={m.mats} state={gs} /></span>}
+                      </div>
+                      {owned ? <span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>
+                        : <Btn onClick={() => purchase(def?.name, m.cost, m.mats, s => ({
+                            ...s,
+                            martialSkills: { ...(s.martialSkills || {}), [m.skill]: { level: 1, exp: 0, expToNext: def?.expBase || 60 } },
+                          }))} disabled={!canAfford(m.cost, m.mats)} small color="#f80">{m.cost}g</Btn>}
+                    </div>
+                  );
+                })}
+              </Sec>
+              <Sec title="✦ Essence Schools">
+                {ESSENCE_MANUALS.map(m => {
+                  const def = ESSENCE_SKILLS[m.skill];
+                  const owned = !!(gs.essenceSkills || {})[m.skill];
+                  return (
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                      <div>
+                        <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{def?.icon} {def?.name}</span>
+                        <span style={{ fontSize: 7, color: "#8899cc", marginLeft: 4 }}>condition-triggered</span>
+                        {Object.keys(m.mats).length > 0 && <span style={{ marginLeft: 3 }}><MatCost mats={m.mats} state={gs} /></span>}
+                      </div>
+                      {owned ? <span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>
+                        : <Btn onClick={() => purchase(def?.name, m.cost, m.mats, s => ({
+                            ...s,
+                            essenceSkills: { ...(s.essenceSkills || {}), [m.skill]: { level: 1, exp: 0, expToNext: def?.expBase || 70 } },
+                            essenceCooldowns: { ...(s.essenceCooldowns || {}), [m.skill]: 0 },
+                          }))} disabled={!canAfford(m.cost, m.mats)} small color="#a6f">{m.cost}g</Btn>}
+                    </div>
+                  );
+                })}
+              </Sec>
+              <Sec title="🛡 Passive Techniques">
                 {SKILL_MANUALS.map(m => {
-                  const owned = !!gs.skills[m.skill];
+                  const owned = !!(gs.skills || {})[m.skill];
                   const def2 = SKILL_DEFINITIONS[m.skill];
                   return (
                     <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
                         <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{def2?.icon} {def2?.name}</span>
-                        {getManual(gs.meridianManualId || "wanderer").recommendedSkills.includes(m.skill) && (
-                          <span style={{ fontSize: 7, color: "#fa6", marginLeft: 4 }}>★ Rec</span>
-                        )}
-                        {Object.keys(m.mats).length > 0 ? (<span style={{ marginLeft: 3 }}><MatCost mats={m.mats} state={gs} /></span>) : null}
+                        {Object.keys(m.mats).length > 0 && <span style={{ marginLeft: 3 }}><MatCost mats={m.mats} state={gs} /></span>}
                       </div>
-                      {owned ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>)
-                        : (<Btn onClick={() => purchase(def2?.name, m.cost, m.mats, s => ({
+                      {owned ? <span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>
+                        : <Btn onClick={() => purchase(def2?.name, m.cost, m.mats, s => ({
                             ...s,
-                            skills: { ...s.skills, [m.skill]: { level: 1, exp: 0, expToNext: 50 } },
-                          }))} disabled={!canAfford(m.cost, m.mats)} small color="#a6f">{m.cost}g</Btn>)}
+                            skills: { ...(s.skills || {}), [m.skill]: { level: 1, exp: 0, expToNext: 50 } },
+                          }))} disabled={!canAfford(m.cost, m.mats)} small color="#8af">{m.cost}g</Btn>}
                     </div>
                   );
                 })}
@@ -1182,92 +1242,148 @@ export default function App() {
           {/* ══════════════════════════════ */}
           {gs.tab === "skills" ? (
             <div>
-              {/* ── SKILL SLOTS ── */}
-              <Sec title={`⚔️ Skill Slots (${(gs.equippedSkills || ["basicAttack"]).length}/${gs.skillSlots || 1})`} color="#f80">
-                {(gs.equippedSkills || ["basicAttack"]).map((skillId, slotIdx) => {
-                  const d = SKILL_DEFINITIONS[skillId];
-                  const sk = gs.skills[skillId];
-                  const isActive = gs.activeSkill === skillId;
-                  // Cycle slot through all owned active skills
-                  const ownedActive = Object.keys(gs.skills).filter(id => SKILL_DEFINITIONS[id]?.type === "active");
-                  function cycleSlot() {
-                    const cur = ownedActive.indexOf(skillId);
-                    const next = ownedActive[(cur + 1) % ownedActive.length];
-                    const newEquipped = [...(gs.equippedSkills || ["basicAttack"])];
-                    newEquipped[slotIdx] = next;
-                    setGs(p => ({
-                      ...p,
-                      equippedSkills: newEquipped,
-                      activeSkill: isActive ? next : p.activeSkill,
-                    }));
-                  }
-                  return (
-                    <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                      <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
-                      <Btn onClick={() => setGs(p => ({ ...p, activeSkill: skillId }))}
-                        color={isActive ? "#0ff" : "#ccd"} small glow={isActive}>
-                        {d?.icon} {d?.name} {sk ? `Lv.${sk.level}` : ""}
-                      </Btn>
-                      {ownedActive.length > 1 && (
-                        <Btn onClick={cycleSlot} color="#bbccee" small>⟳</Btn>
-                      )}
-                    </div>
-                  );
-                })}
-                {/* Buy extra slot */}
-                {(gs.skillSlots || 1) < MAX_SKILL_SLOTS ? (() => {
-                  const slotCost = SKILL_SLOT_COSTS[(gs.skillSlots || 1) - 1];
-                  return slotCost ? (
-                    <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
-                      <Btn onClick={() => purchase("Seal Breaker", slotCost.cost, slotCost.mats, s => ({
-                        ...s,
-                        skillSlots: (s.skillSlots || 1) + 1,
-                        equippedSkills: [...(s.equippedSkills || ["basicAttack"]), "basicAttack"],
-                      }))} disabled={!canAfford(slotCost.cost, slotCost.mats)} color="#fc0" small>
-                        🔓 Open Slot — {slotCost.cost}g
-                      </Btn>
-                      <div style={{ fontSize: 7, color: "#bbccee", marginTop: 2 }}>Meridian Seal Breaker: permanent skill slot</div>
-                    </div>
-                  ) : null;
-                })() : (
-                  <div style={{ fontSize: 8, color: "#4a4", marginTop: 4 }}>All slots unlocked.</div>
-                )}
-              </Sec>
+              {/* ── MARTIAL SKILLS ── */}
+              {(() => {
+                const slots = gs.martialSlots || 1;
+                const equipped = gs.equippedMartialSkills || ["basicMartialArts"];
+                const ownedMartial = Object.keys(gs.martialSkills || { basicMartialArts: {} });
+                return (
+                  <Sec title={`⚔️ Martial Skills (${equipped.length}/${slots})`} color="#f80">
+                    <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>All equipped slots fire every round — later hits get a combo bonus.</div>
+                    {equipped.map((skillId, slotIdx) => {
+                      const def = MARTIAL_SKILLS[skillId];
+                      const st = (gs.martialSkills || {})[skillId];
+                      if (!def || !st) return null;
+                      const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                      const lvData = def.levels[lvIdx];
+                      const comboBonus = slotIdx > 0 ? `+${slotIdx * 30}% combo` : "lead hit";
+                      function cycleMartial() {
+                        const cur = ownedMartial.indexOf(skillId);
+                        const next = ownedMartial[(cur + 1) % ownedMartial.length];
+                        const newEq = [...equipped]; newEq[slotIdx] = next;
+                        setGs(p => ({ ...p, equippedMartialSkills: newEq }));
+                      }
+                      return (
+                        <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                          <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ color: "#f80", fontWeight: 700, fontSize: 10 }}>{def.icon} {lvData.name}</span>
+                              <span style={{ fontSize: 7, color: "#8899cc" }}>{comboBonus} · x{lvData.dmgMult} · Lv.{st.level}</span>
+                            </div>
+                            <Bar value={st.exp} max={st.expToNext} color="#f80" h={4} />
+                          </div>
+                          {ownedMartial.length > 1 && <Btn onClick={cycleMartial} color="#bbccee" small>⟳</Btn>}
+                        </div>
+                      );
+                    })}
+                    {slots < MAX_MARTIAL_SLOTS ? (() => {
+                      const sc = MARTIAL_SLOT_COSTS[slots - 1];
+                      return sc ? (
+                        <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
+                          <Btn onClick={() => purchase("Martial Seal Breaker", sc.cost, sc.mats, s => ({
+                            ...s,
+                            martialSlots: (s.martialSlots || 1) + 1,
+                            equippedMartialSkills: [...(s.equippedMartialSkills || ["basicMartialArts"]), "basicMartialArts"],
+                          }))} disabled={!canAfford(sc.cost, sc.mats)} color="#fc0" small>
+                            🔓 Open Slot — {sc.cost}g
+                          </Btn>
+                          <MatCost mats={sc.mats} state={gs} />
+                        </div>
+                      ) : null;
+                    })() : <div style={{ fontSize: 8, color: "#4a4", marginTop: 4 }}>All martial slots unlocked.</div>}
+                  </Sec>
+                );
+              })()}
 
-              {/* ── ALL LEARNED SKILLS ── */}
-              <Sec title="Learned Skills" color="#a6f">
-                {Object.entries(gs.skills).map(([id, sk]) => {
-                  const d = SKILL_DEFINITIONS[id];
-                  if (!d) return null;
-                  const isEquipped = (gs.equippedSkills || ["basicAttack"]).includes(id);
-                  const isPassive = d.type === "passive";
-                  return (
-                    <div key={id} style={{ padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <span style={{ marginRight: 2 }}>{d.icon}</span>
-                          <span style={{ color: gs.activeSkill === id ? "#0ff" : isEquipped ? "#ccc" : "#ccddee", fontWeight: 600, fontSize: 10 }}>{d.name}</span>
-                          <span style={{ color: "#f80", fontSize: 9, marginLeft: 3 }}>Lv.{sk.level}</span>
-                          {isPassive && <span style={{ fontSize: 7, color: "#4a4", marginLeft: 4 }}>PASSIVE</span>}
-                          {!isPassive && isEquipped && <span style={{ fontSize: 7, color: "#0af", marginLeft: 4 }}>SLOTTED</span>}
-                          {getManual(gs.meridianManualId || "wanderer").recommendedSkills.includes(id) && (
-                            <span style={{ fontSize: 7, color: "#fa6", marginLeft: 4 }}>★ Rec</span>
-                          )}
+              {/* ── ESSENCE SKILLS ── */}
+              {(() => {
+                const slots = gs.essenceSlots || 1;
+                const equipped = gs.equippedEssenceSkills || [];
+                const ownedEssence = Object.keys(gs.essenceSkills || { essenceStrike: {} });
+                return (
+                  <Sec title={`✦ Essence Skills (${equipped.length}/${slots})`} color="#a6f">
+                    <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>Auto-trigger when conditions are met. Drain combat energy.</div>
+                    {equipped.map((skillId, slotIdx) => {
+                      const def = ESSENCE_SKILLS[skillId];
+                      const st = (gs.essenceSkills || {})[skillId];
+                      if (!def || !st) return null;
+                      const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                      const lvData = def.levels[lvIdx];
+                      const t = lvData.trigger;
+                      const triggerDesc = t.type === "cooldown" ? `every ${t.seconds}s` : `HP < ${Math.round(t.threshold * 100)}%`;
+                      const cd = (gs.essenceCooldowns || {})[skillId] || 0;
+                      function cycleEssence() {
+                        const cur = ownedEssence.indexOf(skillId);
+                        const next = ownedEssence[(cur + 1) % ownedEssence.length];
+                        const newEq = [...equipped]; newEq[slotIdx] = next;
+                        setGs(p => ({ ...p, equippedEssenceSkills: newEq }));
+                      }
+                      return (
+                        <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                          <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ color: "#a6f", fontWeight: 700, fontSize: 10 }}>{def.icon} {lvData.name}</span>
+                              <span style={{ fontSize: 7, color: "#8899cc" }}>
+                                {triggerDesc} · {lvData.energyCost}EN · Lv.{st.level}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                              <span style={{ fontSize: 7, color: cd > 0 ? "#f80" : "#4a4" }}>
+                                {cd > 0 ? `⏳ ${cd.toFixed(1)}s` : "✓ ready"}
+                              </span>
+                              <span style={{ fontSize: 7, color: "#ccddee" }}>
+                                {lvData.dmgMult ? `x${lvData.dmgMult} dmg` : lvData.healPct ? `+${Math.round(lvData.healPct * 100)}% HP` : ""}
+                              </span>
+                            </div>
+                            <Bar value={st.exp} max={st.expToNext} color="#a6f" h={4} />
+                          </div>
+                          {ownedEssence.length > 1 && <Btn onClick={cycleEssence} color="#bbccee" small>⟳</Btn>}
                         </div>
-                        {d.type === "active" && d.energyCost > 0 && (
-                          <span style={{ fontSize: 8, color: "#bbccee" }}>x{d.dmgMult} {d.energyCost}EN</span>
-                        )}
+                      );
+                    })}
+                    {slots < MAX_ESSENCE_SLOTS ? (() => {
+                      const sc = ESSENCE_SLOT_COSTS[slots - 1];
+                      return sc ? (
+                        <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
+                          <Btn onClick={() => purchase("Essence Seal Breaker", sc.cost, sc.mats, s => ({
+                            ...s,
+                            essenceSlots: (s.essenceSlots || 1) + 1,
+                            equippedEssenceSkills: [...(s.equippedEssenceSkills || []), "essenceStrike"],
+                          }))} disabled={!canAfford(sc.cost, sc.mats)} color="#a6f" small>
+                            🔓 Open Slot — {sc.cost}g
+                          </Btn>
+                          <MatCost mats={sc.mats} state={gs} />
+                        </div>
+                      ) : null;
+                    })() : <div style={{ fontSize: 8, color: "#4a4", marginTop: 4 }}>All essence slots unlocked.</div>}
+                  </Sec>
+                );
+              })()}
+
+              {/* ── PASSIVE SKILLS ── */}
+              {Object.keys(gs.skills || {}).length > 0 && (
+                <Sec title="🛡 Passive Skills" color="#8af">
+                  {Object.entries(gs.skills).map(([id, sk]) => {
+                    const d = SKILL_DEFINITIONS[id];
+                    if (!d) return null;
+                    return (
+                      <div key={id} style={{ padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span>{d.icon} <span style={{ color: "#ccd", fontWeight: 600, fontSize: 10 }}>{d.name}</span>
+                            <span style={{ color: "#f80", fontSize: 9, marginLeft: 3 }}>Lv.{sk.level}</span>
+                          </span>
+                          <span style={{ fontSize: 8, color: "#8af" }}>
+                            {id === "windStep" ? `+${sk.level * 3}% dodge` : `+${sk.level * 2} DEF`}
+                          </span>
+                        </div>
+                        <Bar value={sk.exp} max={sk.expToNext} color="#8af" h={4} />
                       </div>
-                      {isPassive && (
-                        <div style={{ fontSize: 8, color: "#8af" }}>
-                          {id === "windStep" ? `+${sk.level * 3}% dodge` : `+${sk.level * 2} DEF`}
-                        </div>
-                      )}
-                      <Bar value={sk.exp} max={sk.expToNext} color="#a6f" h={4} />
-                    </div>
-                  );
-                })}
-              </Sec>
+                    );
+                  })}
+                </Sec>
+              )}
             </div>
           ) : null}
 

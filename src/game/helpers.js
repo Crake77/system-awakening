@@ -136,7 +136,12 @@ export function getMaxHp(state) {
 }
 
 export function getMaxCombatEnergy(state) {
-  return 30 + state.medTechLevel * 3 + bodyTechBonus(state, "combatEn");
+  return Math.floor(20 + getInt(state) * 4 + bodyTechBonus(state, "combatEn"));
+}
+
+// Combat energy regeneration per tick (0.5s) — driven by WIS
+export function getCombatEnergyRegen(state) {
+  return 0.2 + getWis(state) * 0.06;
 }
 
 export function getRestRate(state) {

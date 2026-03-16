@@ -22,7 +22,7 @@ export const MERIDIAN_MANUALS = [
     cost: 700, shopMats: { iron: 5, bone: 3 },
     passive: { type: "maxHpMult", value: 0.08 },
     passiveDesc: "+8% Max HP",
-    recommendedSkills: ["ironBody", "manaShield"],
+    recommendedSkills: ["ironBody"],
     weights: { str: 2, vit: 5, agi: 1, int: 1, wis: 1 },
     grantBase: 0.40, grantVariance: 0.50,
     clickCost: 4,
