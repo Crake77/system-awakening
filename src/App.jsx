@@ -1399,10 +1399,28 @@ export default function App() {
                 const slots = gs.martialSlots || 1;
                 const equipped = gs.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }];
                 // Collect all unlocked (schoolId, techIdx) pairs from all schools
-                const allAvailableTechs = [];
+                // Normalize all schools to new format inline (in case migration missed anything)
+                const martialSkillsNorm = {};
                 Object.keys(gs.martialSkills || {}).forEach(schoolId => {
-                  const school = gs.martialSkills[schoolId];
-                  (school.techLevels || []).forEach((_, techIdx) => {
+                  const raw = gs.martialSkills[schoolId];
+                  if (raw && raw.techLevels && raw.techLevels.length > 0) {
+                    martialSkillsNorm[schoolId] = raw;
+                  } else {
+                    const def2 = MARTIAL_SKILLS[schoolId];
+                    const expBase = def2?.expBase || 50;
+                    const techIdx = Math.max(0, ((raw?.level) || 1) - 1);
+                    const techLevels = [];
+                    for (let i = 0; i < techIdx; i++) techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+                    techLevels.push({ level: Math.min(5, (raw?.level) || 1), exp: raw?.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+                    martialSkillsNorm[schoolId] = { activeTechIdx: techIdx, techLevels };
+                  }
+                });
+                if (!martialSkillsNorm.basicMartialArts) {
+                  martialSkillsNorm.basicMartialArts = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] };
+                }
+                const allAvailableTechs = [];
+                Object.keys(martialSkillsNorm).forEach(schoolId => {
+                  martialSkillsNorm[schoolId].techLevels.forEach((_, techIdx) => {
                     allAvailableTechs.push({ schoolId, techIdx });
                   });
                 });
@@ -1410,10 +1428,22 @@ export default function App() {
                   <Sec title={`⚔️ Martial Skills (${equipped.length}/${slots})`} color="#f80">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>All equipped slots fire every round — later hits get a combo bonus.</div>
                     {Array.from({ length: slots }).map((_, slotIdx) => {
-                      const slot = equipped[slotIdx];
-                      const def = slot ? MARTIAL_SKILLS[slot.schoolId] : null;
-                      const school = slot ? (gs.martialSkills || {})[slot.schoolId] : null;
-                      const tl = (school?.techLevels || [])[slot?.techIdx];
+                      // Normalize slot — handle string (old format), null, or missing school
+                      const rawSlot = equipped[slotIdx];
+                      let slot;
+                      if (!rawSlot) {
+                        slot = { schoolId: "basicMartialArts", techIdx: 0 };
+                      } else if (typeof rawSlot === 'string') {
+                        const sid = martialSkillsNorm[rawSlot] ? rawSlot : "basicMartialArts";
+                        slot = { schoolId: sid, techIdx: martialSkillsNorm[sid]?.activeTechIdx || 0 };
+                      } else if (!martialSkillsNorm[rawSlot.schoolId]) {
+                        slot = { schoolId: "basicMartialArts", techIdx: 0 };
+                      } else {
+                        slot = rawSlot;
+                      }
+                      const def = MARTIAL_SKILLS[slot.schoolId];
+                      const school = martialSkillsNorm[slot.schoolId];
+                      const tl = school?.techLevels?.[slot.techIdx] || school?.techLevels?.[0];
                       if (!def || !school || !tl) return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
                           <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
@@ -1421,7 +1451,7 @@ export default function App() {
                           <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#f80" small>🛒 Shop</Btn>
                         </div>
                       );
-                      const lvData = def.levels[slot.techIdx];
+                      const lvData = def.levels[slot.techIdx] || def.levels[0];
                       const comboBonus = slotIdx > 0 ? `+${slotIdx * 30}% combo` : "lead hit";
                       const isActiveTech = school.activeTechIdx === slot.techIdx;
                       const alreadyMastered = school.activeTechIdx > slot.techIdx;
@@ -1502,10 +1532,27 @@ export default function App() {
               {(() => {
                 const slots = gs.essenceSlots || 1;
                 const equipped = gs.equippedEssenceSkills || [];
-                const allAvailableEssence = [];
+                const essenceSkillsNorm = {};
                 Object.keys(gs.essenceSkills || {}).forEach(schoolId => {
-                  const school = gs.essenceSkills[schoolId];
-                  (school.techLevels || []).forEach((_, techIdx) => {
+                  const raw = gs.essenceSkills[schoolId];
+                  if (raw && raw.techLevels && raw.techLevels.length > 0) {
+                    essenceSkillsNorm[schoolId] = raw;
+                  } else {
+                    const def2 = ESSENCE_SKILLS[schoolId];
+                    const expBase = def2?.expBase || 60;
+                    const techIdx = Math.max(0, ((raw?.level) || 1) - 1);
+                    const techLevels = [];
+                    for (let i = 0; i < techIdx; i++) techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+                    techLevels.push({ level: Math.min(5, (raw?.level) || 1), exp: raw?.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+                    essenceSkillsNorm[schoolId] = { activeTechIdx: techIdx, techLevels };
+                  }
+                });
+                if (!essenceSkillsNorm.essenceStrike) {
+                  essenceSkillsNorm.essenceStrike = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] };
+                }
+                const allAvailableEssence = [];
+                Object.keys(essenceSkillsNorm).forEach(schoolId => {
+                  essenceSkillsNorm[schoolId].techLevels.forEach((_, techIdx) => {
                     allAvailableEssence.push({ schoolId, techIdx });
                   });
                 });
@@ -1513,10 +1560,21 @@ export default function App() {
                   <Sec title={`✦ Essence Skills (${equipped.length}/${slots})`} color="#a6f">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>Auto-trigger when conditions are met. Drain combat energy.</div>
                     {Array.from({ length: slots }).map((_, slotIdx) => {
-                      const slot = equipped[slotIdx];
-                      const def = slot ? ESSENCE_SKILLS[slot.schoolId] : null;
-                      const school = slot ? (gs.essenceSkills || {})[slot.schoolId] : null;
-                      const tl = (school?.techLevels || [])[slot?.techIdx];
+                      const rawSlot = equipped[slotIdx];
+                      let slot;
+                      if (!rawSlot) {
+                        slot = { schoolId: "essenceStrike", techIdx: 0 };
+                      } else if (typeof rawSlot === 'string') {
+                        const sid = essenceSkillsNorm[rawSlot] ? rawSlot : "essenceStrike";
+                        slot = { schoolId: sid, techIdx: essenceSkillsNorm[sid]?.activeTechIdx || 0 };
+                      } else if (!essenceSkillsNorm[rawSlot.schoolId]) {
+                        slot = { schoolId: "essenceStrike", techIdx: 0 };
+                      } else {
+                        slot = rawSlot;
+                      }
+                      const def = ESSENCE_SKILLS[slot.schoolId];
+                      const school = essenceSkillsNorm[slot.schoolId];
+                      const tl = school?.techLevels?.[slot.techIdx] || school?.techLevels?.[0];
                       if (!def || !school || !tl) return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
                           <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
@@ -1524,7 +1582,7 @@ export default function App() {
                           <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#a6f" small>🛒 Shop</Btn>
                         </div>
                       );
-                      const lvData = def.levels[slot.techIdx];
+                      const lvData = def.levels[slot.techIdx] || def.levels[0];
                       const t = lvData.trigger;
                       const triggerDesc = t.type === "cooldown" ? `every ${t.seconds}s` : `HP < ${Math.round(t.threshold * 100)}%`;
                       const isActiveTech = school.activeTechIdx === slot.techIdx;
