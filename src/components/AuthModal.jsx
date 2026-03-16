@@ -89,11 +89,11 @@ export default function AuthModal({ onClose }) {
                 inputMode="numeric"
                 placeholder="000000"
                 value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                maxLength={6}
+                onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                maxLength={8}
                 required
                 autoFocus
-                style={{ ...inputStyle, fontSize: 24, letterSpacing: 8, textAlign: 'center' }}
+                style={{ ...inputStyle, fontSize: 24, letterSpacing: 6, textAlign: 'center' }}
               />
               {error && <p style={{ color: '#f66', fontSize: 12, margin: '0 0 8px' }}>{error}</p>}
               <button type="submit" disabled={loading || code.length < 6} style={btnStyle()}>
