@@ -363,7 +363,7 @@ export default function App() {
     <div style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", background: "#141430" }}>
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       {/* HEADER */}
-      <div style={{ background: "#181838", borderBottom: "1px solid #1a1a2e", padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+      <div style={{ background: "#181838", borderBottom: "1px solid #363658", padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontFamily: "'Orbitron'", fontSize: 12, color: "#0ff", fontWeight: 900 }}>SYSTEM</span>
           <span style={{ color: "#a6f", fontSize: 10 }}>MT:{gs.medTechLevel}</span>
@@ -381,7 +381,7 @@ export default function App() {
               {cloudStatus === 'saving' && <span style={{ fontSize: 9, color: '#888' }}>☁ syncing…</span>}
               {cloudStatus === 'saved' && <span style={{ fontSize: 9, color: '#4a4' }}>☁ synced</span>}
               {cloudStatus === 'error' && <span style={{ fontSize: 9, color: '#f44' }}>☁ err</span>}
-              <Btn onClick={() => supabase.auth.signOut()} small color="#aaa">Sign Out</Btn>
+              <Btn onClick={() => supabase.auth.signOut()} small color="#bbb">Sign Out</Btn>
             </>
           ) : (
             <Btn onClick={() => setShowAuthModal(true)} small color="#5b4fcf">Sign In</Btn>
@@ -404,8 +404,8 @@ export default function App() {
       ) : null}
 
       {/* MATERIALS BAR */}
-      <div style={{ padding: "2px 10px 3px", background: "#151532", display: "flex", gap: 5, flexWrap: "wrap", borderBottom: "1px solid #1a1a2e" }}>
-        {MATERIALS.map(m => gs.mats[m] > 0 ? (<span key={m} style={{ fontSize: 8, color: "#aabbdd" }}>{MAT_ICONS[m]}{gs.mats[m]}</span>) : null)}
+      <div style={{ padding: "2px 10px 3px", background: "#151532", display: "flex", gap: 5, flexWrap: "wrap", borderBottom: "1px solid #363658" }}>
+        {MATERIALS.map(m => gs.mats[m] > 0 ? (<span key={m} style={{ fontSize: 8, color: "#ccddee" }}>{MAT_ICONS[m]}{gs.mats[m]}</span>) : null)}
         {gs.procBoostTimer > 0 ? (<span style={{ fontSize: 8, color: "#a6f", animation: "pulse 1s infinite" }}>⚡{Math.ceil(gs.procBoostTimer)}s</span>) : null}
       </div>
 
@@ -431,11 +431,11 @@ export default function App() {
 
               {/* ── DUNGEON HEADER ── */}
               {gs.activity === "dungeon" && gs.currentMonster && !gs.incursionActive ? (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#181838", borderRadius: 5, padding: "5px 8px", border: "1px solid #1a1a3e" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#181838", borderRadius: 5, padding: "5px 8px", border: "1px solid #34345c" }}>
                   <span style={{ fontSize: 13, color: "#0ff", fontFamily: "'Orbitron'", fontWeight: 900, letterSpacing: 2 }}>
                     {DUNGEON_RANKS[gs.dungeonRank]}-RANK &nbsp; F{gs.dungeonFloor}
                   </span>
-                  <span style={{ fontSize: 8, color: "#99aacc" }}>Best: F{gs.highestFloors[DUNGEON_RANKS[gs.dungeonRank]] || 0}</span>
+                  <span style={{ fontSize: 8, color: "#bbccee" }}>Best: F{gs.highestFloors[DUNGEON_RANKS[gs.dungeonRank]] || 0}</span>
                   <Btn onClick={leaveDungeon} color="#f44" small>🏃 Leave</Btn>
                 </div>
               ) : null}
@@ -468,7 +468,7 @@ export default function App() {
                           <button key={rk} onClick={() => ok && enterDungeon(i)} disabled={!ok || gs.hp <= 5}
                             style={{ background: ok ? "#111128" : "#181836", border: `1px solid ${ok ? "#3a3a5e" : "#181828"}`, borderRadius: 5, padding: 5, cursor: ok ? "pointer" : "default", textAlign: "center", opacity: ok ? 1 : 0.3 }}>
                             <div style={{ fontSize: 16, fontWeight: 900, color: ok ? "#0ff" : "#333", fontFamily: "'Orbitron'" }}>{rk}</div>
-                            <div style={{ fontSize: 7, color: "#aabbdd" }}>{ok ? `F${gs.highestFloors[rk] || 0}` : "🔒"}</div>
+                            <div style={{ fontSize: 7, color: "#ccddee" }}>{ok ? `F${gs.highestFloors[rk] || 0}` : "🔒"}</div>
                           </button>
                         );
                       })}
@@ -550,14 +550,14 @@ export default function App() {
                         return sk ? (
                           <div style={{ fontSize: 8, color: "#f80" }}>
                             {sk.icon} {sk.name}{skState ? ` Lv.${skState.level}` : ""}
-                            {sk.energyCost > 0 ? <span style={{ color: "#99aacc", marginLeft: 3 }}>{sk.energyCost}EN</span> : null}
+                            {sk.energyCost > 0 ? <span style={{ color: "#bbccee", marginLeft: 3 }}>{sk.energyCost}EN</span> : null}
                           </div>
                         ) : null;
                       })()}
                       {gs.lastHit > 0 ? <div style={{ fontSize: 10, color: "#f44", fontWeight: 700, marginTop: 2 }}>-{gs.lastHit} HP</div> : <div style={{ height: 14 }} />}
                     </div>
                     <div style={{ ...cell("#0e0a0a", monColor + "66"), borderRadius: "0 0 6px 6px" }}>
-                      <div style={{ fontSize: 7, color: "#99aacc" }}>Drops loot → convert via jobs</div>
+                      <div style={{ fontSize: 7, color: "#bbccee" }}>Drops loot → convert via jobs</div>
                     </div>
 
                   </div>
@@ -566,14 +566,14 @@ export default function App() {
 
               {/* ── COMBAT LOG ── */}
               {gs.activity === "dungeon" && gs.currentMonster && !gs.incursionActive ? (
-                <div style={{ background: "#141430", borderRadius: 5, border: "1px solid #1a1a2e", padding: "6px 8px", maxHeight: 110, overflowY: "auto", display: "flex", flexDirection: "column-reverse" }}>
+                <div style={{ background: "#141430", borderRadius: 5, border: "1px solid #363658", padding: "6px 8px", maxHeight: 110, overflowY: "auto", display: "flex", flexDirection: "column-reverse" }}>
                   {[...(gs.combatLog || [])].reverse().map((line, i) => {
                     const color = line.startsWith("🗡") ? "#ccc"
                       : line.startsWith("💥") ? "#f66"
                       : line.startsWith("💨") ? "#4cf"
                       : line.startsWith("🛡") ? "#48f"
                       : line.startsWith("⚔") ? "#fc0"
-                      : "#aabbcc";
+                      : "#bbccdd";
                     return (
                       <div key={i} style={{ fontSize: 9, color, lineHeight: 1.6, opacity: 1 - i * 0.07 }}>
                         {line}
@@ -596,16 +596,16 @@ export default function App() {
                 const refinedCap = getRefinedCap(gs);
                 const refinedFull = gs.processedEssence >= refinedCap;
                 return (
-                  <div style={{ background: gs.activity === "meditating" ? "#1a102a" : "#1a1a3a", borderRadius: 5, padding: 8, border: `1px solid ${gs.activity === "meditating" ? "#a6f" : "#2a2a4e"}`, marginBottom: 8 }}>
+                  <div style={{ background: gs.activity === "meditating" ? "#1a102a" : "#1a1a3a", borderRadius: 5, padding: 8, border: `1px solid ${gs.activity === "meditating" ? "#a6f" : "#3e3e62"}`, marginBottom: 8 }}>
                     {gs.activity === "meditating" ? (
                       <div>
                         <div style={{ fontSize: 11, color: "#a6f", fontWeight: 700 }}>🧘 Refining — {fmtDecimal(processRate)}/s</div>
-                        <div style={{ fontSize: 9, color: "#aabbdd" }}>Raw → ✦ refined essence{refinedFull ? " (pool full!)" : ""}</div>
-                        <Btn onClick={stopActivity} small color="#bbc" style={{ marginTop: 4 }}>Stop</Btn>
+                        <div style={{ fontSize: 9, color: "#ccddee" }}>Raw → ✦ refined essence{refinedFull ? " (pool full!)" : ""}</div>
+                        <Btn onClick={stopActivity} small color="#ccd" style={{ marginTop: 4 }}>Stop</Btn>
                       </div>
                     ) : (
                       <div>
-                        <div style={{ fontSize: 9, color: "#aabbdd" }}>Meditate to refine raw → ✦ refined. Core generates raw passively.</div>
+                        <div style={{ fontSize: 9, color: "#ccddee" }}>Meditate to refine raw → ✦ refined. Core generates raw passively.</div>
                         <Btn onClick={startMeditate} disabled={gs.activity === "dungeon" || gs.activity === "working"} color="#a6f" small style={{ marginTop: 3 }}>🧘 Meditate</Btn>
                         {gs.activity !== "idle" ? (<span style={{ fontSize: 8, color: "#f44", marginLeft: 6 }}>Stop first!</span>) : null}
                       </div>
@@ -616,7 +616,7 @@ export default function App() {
 
               {/* Med Technique */}
               <Sec title={`📖 Med Technique Lv.${gs.medTechLevel}`} color="#a6f">
-                <div style={{ fontSize: 9, color: "#aabbdd", marginBottom: 4 }}>Refine: {fmtDecimal(processRate)}/s</div>
+                <div style={{ fontSize: 9, color: "#ccddee", marginBottom: 4 }}>Refine: {fmtDecimal(processRate)}/s</div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "#a6f" }}>{medTechCost}✦</span>
                   <Btn onClick={levelMedTech} disabled={gs.processedEssence < medTechCost} color="#a6f" small glow={gs.processedEssence >= medTechCost}>⬆ Level</Btn>
@@ -635,10 +635,10 @@ export default function App() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <div style={{ background: "#1a1a3a", borderRadius: 5, padding: 8, border: "1px solid #2a1a3a", textAlign: "center" }}>
                         <div style={{ fontSize: 8, color: "#a6f" }}>RAW ESSENCE</div>
-                        <div style={{ fontSize: 14, color: "#a6f", fontWeight: 700 }}>{fmtDecimal(gs.rawEssence)}<span style={{ fontSize: 9, color: "#aabbdd" }}>/{poolMax}</span></div>
+                        <div style={{ fontSize: 14, color: "#a6f", fontWeight: 700 }}>{fmtDecimal(gs.rawEssence)}<span style={{ fontSize: 9, color: "#ccddee" }}>/{poolMax}</span></div>
                         <Bar value={gs.rawEssence} max={poolMax} color="#a6f" h={5} />
                       </div>
-                      <div style={{ background: "#0b0b1e", borderRadius: 5, padding: 6, border: "1px solid #1a1a3a", textAlign: "center" }}>
+                      <div style={{ background: "#0b0b1e", borderRadius: 5, padding: 6, border: "1px solid #343458", textAlign: "center" }}>
                         {(() => { const cnt = Math.round((gs.poolCap - 50) / POOL_EXPAND_AMOUNT); return (
                           <div style={{ fontSize: 8, color: "#68f", marginBottom: 3 }}>🌊 Mana Veins — cap {poolMax} <span style={{ color: "#f80" }}>{cnt}</span></div>
                         ); })()}
@@ -674,7 +674,7 @@ export default function App() {
                                 ))}
                               </div>
                             ) : (
-                              <div style={{ fontSize: 8, color: "#8899cc", marginBottom: 4 }}>No stats trained yet</div>
+                              <div style={{ fontSize: 8, color: "#aabbee", marginBottom: 4 }}>No stats trained yet</div>
                             )}
                             <Btn onClick={trainMeridian} disabled={gs.processedEssence < manual.clickCost} color="#0f0" small glow={gs.processedEssence >= manual.clickCost}>
                               Train ({manual.clickCost}✦)
@@ -704,7 +704,7 @@ export default function App() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <div style={{ background: "#1a1a3a", borderRadius: 5, padding: 8, border: "1px solid #3a2a1a", textAlign: "center" }}>
                         <div style={{ fontSize: 8, color: "#f80" }}>✦ REFINED ESSENCE</div>
-                        <div style={{ fontSize: 14, color: "#f80", fontWeight: 700 }}>{fmt(gs.processedEssence)}<span style={{ fontSize: 9, color: "#aabbdd" }}>/{refinedCap}</span></div>
+                        <div style={{ fontSize: 14, color: "#f80", fontWeight: 700 }}>{fmt(gs.processedEssence)}<span style={{ fontSize: 9, color: "#ccddee" }}>/{refinedCap}</span></div>
                         <Bar value={gs.processedEssence} max={refinedCap} color="#f80" h={5} />
                       </div>
                       <div style={{ background: "#0e0b0b", borderRadius: 5, padding: 6, border: "1px solid #3a1a1a", textAlign: "center" }}>
@@ -715,10 +715,10 @@ export default function App() {
                       </div>
                       <div style={{ background: "#0f0b00", borderRadius: 5, padding: 6, border: `1px solid ${gs.coreTier >= 0 ? "#f80" : "#2a1a00"}` }}>
                         <div style={{ fontSize: 9, color: "#f80", fontWeight: 700, marginBottom: 4 }}>💎 Core{gs.coreTier >= 0 ? ` — ${CORE_TIERS[gs.coreTier].name}` : ""}{gs.coreTier >= 0 ? <span style={{ color: "#f80", fontSize: 8 }}> {gs.coreTier + 1}</span> : null}</div>
-                        {!coreUnlocked ? (<div style={{ fontSize: 9, color: "#aaa" }}>🔒 Pool ≥{CORE_UNLOCK_POOL_CAP} ({gs.refinedCap || 50})</div>)
+                        {!coreUnlocked ? (<div style={{ fontSize: 9, color: "#bbb" }}>🔒 Pool ≥{CORE_UNLOCK_POOL_CAP} ({gs.refinedCap || 50})</div>)
                           : gs.coreTier < 0 ? (
                             <div>
-                              <div style={{ fontSize: 8, color: "#aabbdd", marginBottom: 4 }}>Passive raw essence gen.</div>
+                              <div style={{ fontSize: 8, color: "#ccddee", marginBottom: 4 }}>Passive raw essence gen.</div>
                               <Btn onClick={upgradeCore} disabled={gs.processedEssence < CORE_TIERS[0].procEssCost} color="#f80" small>Form ({CORE_TIERS[0].procEssCost}✦)</Btn>
                             </div>
                           ) : (
@@ -736,7 +736,7 @@ export default function App() {
 
               {/* Body Cultivation */}
               <Sec title="💪 Body Cultivation" color="#0af">
-                <div style={{ fontSize: 9, color: "#aabbdd", marginBottom: 6 }}>Equip a technique to gain its stats. Evolves at Lv.10.</div>
+                <div style={{ fontSize: 9, color: "#ccddee", marginBottom: 6 }}>Equip a technique to gain its stats. Evolves at Lv.10.</div>
 
                 {/* Equipped slots */}
                 {Array.from({ length: gs.bodySlots || 1 }).map((_, slotIdx) => {
@@ -744,7 +744,7 @@ export default function App() {
                   if (!equippedId) {
                     return (
                       <div key={slotIdx} style={{ background: "#1a1a36", borderRadius: 5, padding: 8, border: "1px dashed #1a1a3a", marginBottom: 6, textAlign: "center" }}>
-                        <div style={{ fontSize: 9, color: "#8899cc" }}>Slot {slotIdx + 1} — Empty</div>
+                        <div style={{ fontSize: 9, color: "#aabbee" }}>Slot {slotIdx + 1} — Empty</div>
                         <div style={{ fontSize: 8, color: "#223", marginTop: 2 }}>Equip a technique below</div>
                       </div>
                     );
@@ -774,7 +774,7 @@ export default function App() {
                           <span style={{ fontSize: 8, color: "#f80", marginLeft: 6 }}>Lv.{owned.level}/10</span>
                           {owned.tier > 0 && <span style={{ fontSize: 7, color: "#fa6", marginLeft: 4 }}>Tier {owned.tier + 1}</span>}
                         </div>
-                        <Btn onClick={() => unequipBodyTech(equippedId)} small color="#aaa">Unequip</Btn>
+                        <Btn onClick={() => unequipBodyTech(equippedId)} small color="#bbb">Unequip</Btn>
                       </div>
                       {statsStr && <div style={{ fontSize: 8, color: "#6af", marginBottom: 2 }}>{statsStr}</div>}
                       {specialStr && <div style={{ fontSize: 8, color: "#6cf", marginBottom: 2 }}>{specialStr}</div>}
@@ -812,7 +812,7 @@ export default function App() {
                     const tierData = tech.tiers[owned.tier] || tech.tiers[0];
                     const slotsOpen = (gs.equippedBodyTechs || []).length < (gs.bodySlots || 1);
                     return (
-                      <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 6px", background: "#181836", borderRadius: 4, border: "1px solid #1a1a2e", marginBottom: 4 }}>
+                      <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 6px", background: "#181836", borderRadius: 4, border: "1px solid #363658", marginBottom: 4 }}>
                         <div>
                           <span style={{ fontSize: 12 }}>{tierData.icon}</span>
                           <span style={{ fontSize: 9, color: "#bbb", marginLeft: 4 }}>{tierData.name}</span>
@@ -827,7 +827,7 @@ export default function App() {
                   })}
 
                 {Object.keys(gs.ownedBodyTechs || {}).length === 0 && (
-                  <div style={{ fontSize: 9, color: "#8899cc" }}>No body techniques yet. Buy one in the Shop.</div>
+                  <div style={{ fontSize: 9, color: "#aabbee" }}>No body techniques yet. Buy one in the Shop.</div>
                 )}
               </Sec>
             </div>
@@ -855,7 +855,7 @@ export default function App() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 22 }}>{item.icon}</span>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 8, color: "#99aacc" }}>{label}</div>
+                            <div style={{ fontSize: 8, color: "#bbccee" }}>{label}</div>
                             <div style={{ fontSize: 11, color: "#0ff", fontWeight: 700 }}>{item.name}</div>
                             <div style={{ fontSize: 9, color: statColor }}>{statLabel}</div>
                           </div>
@@ -882,14 +882,14 @@ export default function App() {
                     { label: "INT", val: int_, base: gs.baseInt, cult: gs.cultInt || 0, color: "#48f", effect: "→ Cultivation (future skills)" },
                     { label: "WIS", val: wis, base: gs.baseWis, cult: gs.cultWis || 0, color: "#a6f", effect: "→ Essence insight (future)" },
                   ].map(({ label, val, base, cult, color, effect }) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
                         <span style={{ fontSize: 11, color, fontWeight: 700, minWidth: 32, display: "inline-block" }}>{label}</span>
-                        <span style={{ fontSize: 9, color: "#aabbdd" }}>{base} base{cult > 0.05 ? ` + ${cult.toFixed(1)} trained` : ""}</span>
+                        <span style={{ fontSize: 9, color: "#ccddee" }}>{base} base{cult > 0.05 ? ` + ${cult.toFixed(1)} trained` : ""}</span>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <span style={{ fontSize: 13, color, fontWeight: 700 }}>{val.toFixed(1)}</span>
-                        <div style={{ fontSize: 8, color: "#99aacc" }}>{effect}</div>
+                        <div style={{ fontSize: 8, color: "#bbccee" }}>{effect}</div>
                       </div>
                     </div>
                   ))}
@@ -904,10 +904,10 @@ export default function App() {
                     { label: "Max HP",        val: gs.maxHp, color: "#e44", desc: "Total health. Reaching 0 ends the dungeon run." },
                     { label: "Combat Energy", val: gs.maxCombatEnergy, color: "#48f", desc: "Fuel for active skills. Refills while resting." },
                   ].map(({ label, val, color, desc }) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
-                        <div style={{ fontSize: 10, color: "#aaa" }}>{label}</div>
-                        <div style={{ fontSize: 8, color: "#99aacc" }}>{desc}</div>
+                        <div style={{ fontSize: 10, color: "#bbb" }}>{label}</div>
+                        <div style={{ fontSize: 8, color: "#bbccee" }}>{desc}</div>
                       </div>
                       <span style={{ fontSize: 14, color, fontWeight: 700 }}>{val}</span>
                     </div>
@@ -923,10 +923,10 @@ export default function App() {
                     { label: "Raw Pool", val: `${fmtDecimal(gs.rawEssence)} / ${poolMax}`, sub: `+${POOL_EXPAND_AMOUNT} per Mana Vein upgrade`, color: "#68f" },
                     { label: "Refined Pool", val: `${fmt(gs.processedEssence)} / ${refinedCap}`, sub: `+${POOL_EXPAND_AMOUNT} per Mana Pool upgrade`, color: "#fa6" },
                   ].map(({ label, val, sub, color }) => (
-                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
-                        <div style={{ fontSize: 10, color: "#bbc" }}>{label}</div>
-                        <div style={{ fontSize: 8, color: "#99aacc" }}>{sub}</div>
+                        <div style={{ fontSize: 10, color: "#ccd" }}>{label}</div>
+                        <div style={{ fontSize: 8, color: "#bbccee" }}>{sub}</div>
                       </div>
                       <span style={{ fontSize: 10, color, fontWeight: 700, textAlign: "right", maxWidth: 120 }}>{val}</span>
                     </div>
@@ -942,14 +942,14 @@ export default function App() {
           {gs.tab === "inventory" ? (
             <div>
               {/* Monster drops / crafting materials */}
-              <Sec title="🪣 Materials" color="#bbc">
-                <div style={{ fontSize: 9, color: "#99aacc", marginBottom: 6 }}>Dropped by monsters. Convert to gold via Jobs.</div>
+              <Sec title="🪣 Materials" color="#ccd">
+                <div style={{ fontSize: 9, color: "#bbccee", marginBottom: 6 }}>Dropped by monsters. Convert to gold via Jobs.</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
                   {MATERIALS.map(m => (
-                    <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", background: "#1a1a36", borderRadius: 4, border: "1px solid #1a1a2e" }}>
+                    <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 6px", background: "#1a1a36", borderRadius: 4, border: "1px solid #363658" }}>
                       <span style={{ fontSize: 16 }}>{MAT_ICONS[m]}</span>
                       <div>
-                        <div style={{ fontSize: 9, color: gs.mats[m] > 0 ? "#aaa" : "#444" }}>{MAT_LABELS[m]}</div>
+                        <div style={{ fontSize: 9, color: gs.mats[m] > 0 ? "#bbb" : "#444" }}>{MAT_LABELS[m]}</div>
                         <div style={{ fontSize: 11, color: gs.mats[m] > 0 ? "#fff" : "#333", fontWeight: 700 }}>{gs.mats[m] || 0}</div>
                       </div>
                     </div>
@@ -965,16 +965,16 @@ export default function App() {
                   { label: "Accessories", owned: gs.ownedAccessories, getFn: getAccessory, equipped: gs.accessory, key: "accessory", statFn: a => Object.entries(a.bonus || {}).map(([k,v]) => `+${v} ${k}`).join(" ") || "—" },
                 ].map(({ label, owned, getFn, equipped, key, statFn }) => (
                   <div key={label} style={{ marginBottom: 6 }}>
-                    <div style={{ fontSize: 9, color: "#99aacc", marginBottom: 3 }}>{label}</div>
+                    <div style={{ fontSize: 9, color: "#bbccee", marginBottom: 3 }}>{label}</div>
                     {owned.map(id => {
                       const it = getFn(id);
                       const isEquipped = id === equipped;
                       return (
-                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", borderBottom: "1px solid #0d0d18" }}>
+                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 0", borderBottom: "1px solid #2c2c48" }}>
                           <div>
                             <span style={{ marginRight: 4 }}>{it.icon}</span>
-                            <span style={{ fontSize: 10, color: isEquipped ? "#0ff" : "#bbc" }}>{it.name}</span>
-                            <span style={{ fontSize: 8, color: "#99aacc", marginLeft: 4 }}>{statFn(it)}</span>
+                            <span style={{ fontSize: 10, color: isEquipped ? "#0ff" : "#ccd" }}>{it.name}</span>
+                            <span style={{ fontSize: 8, color: "#bbccee", marginLeft: 4 }}>{statFn(it)}</span>
                           </div>
                           {isEquipped
                             ? <span style={{ fontSize: 8, color: "#0ff" }}>Equipped</span>
@@ -988,7 +988,7 @@ export default function App() {
 
               {/* Known Manuals */}
               <Sec title="📖 Known Manuals" color="#a6f">
-                <div style={{ fontSize: 9, color: "#99aacc", marginBottom: 4 }}>All scriptures and techniques you have acquired.</div>
+                <div style={{ fontSize: 9, color: "#bbccee", marginBottom: 4 }}>All scriptures and techniques you have acquired.</div>
 
                 {/* Meridian manuals */}
                 {(gs.ownedMeridianManuals || ["wanderer"]).length > 0 && (
@@ -998,7 +998,7 @@ export default function App() {
                       const m = getManual(id);
                       const active = id === (gs.meridianManualId || "wanderer");
                       return (
-                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                           <span style={{ fontSize: 9, color: active ? "#0f0" : "#bbb" }}>{m.icon} {m.name}</span>
                           {active ? <span style={{ fontSize: 8, color: "#0f0" }}>Active</span>
                             : <Btn onClick={() => setMeridianManual(id)} small color="#0f0">Use</Btn>}
@@ -1018,9 +1018,9 @@ export default function App() {
                       const tierData = tech.tiers[owned.tier] || tech.tiers[0];
                       const isEquipped = (gs.equippedBodyTechs || []).includes(id);
                       return (
-                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                           <span style={{ fontSize: 9, color: isEquipped ? "#0af" : "#bbb" }}>{tierData.icon} {tierData.name}</span>
-                          <span style={{ fontSize: 8, color: "#99aacc" }}>Lv.{owned.level}/10 T{owned.tier+1}{isEquipped ? " ✓" : ""}</span>
+                          <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{owned.level}/10 T{owned.tier+1}{isEquipped ? " ✓" : ""}</span>
                         </div>
                       );
                     })}
@@ -1035,9 +1035,9 @@ export default function App() {
                       const def2 = SKILL_DEFINITIONS[id];
                       const sk = gs.skills[id];
                       return (
-                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                           <span style={{ fontSize: 9, color: "#a6f" }}>{def2?.icon} {def2?.name}</span>
-                          <span style={{ fontSize: 8, color: "#99aacc" }}>Lv.{sk.level}</span>
+                          <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{sk.level}</span>
                         </div>
                       );
                     })}
@@ -1045,7 +1045,7 @@ export default function App() {
                 )}
 
                 {(gs.ownedMeridianManuals || ["wanderer"]).length <= 1 && Object.keys(gs.ownedBodyTechs || {}).length === 0 && Object.keys(gs.skills).filter(id => id !== "basicAttack").length === 0 && (
-                  <div style={{ fontSize: 9, color: "#8899cc" }}>No additional manuals yet. Visit the Shop.</div>
+                  <div style={{ fontSize: 9, color: "#aabbee" }}>No additional manuals yet. Visit the Shop.</div>
                 )}
               </Sec>
             </div>
@@ -1063,11 +1063,11 @@ export default function App() {
                   {items.map(it => {
                     const owned = ownedList.includes(it.id);
                     return (
-                      <div key={it.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                      <div key={it.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                         <div>
                           <span style={{ marginRight: 2 }}>{it.icon}</span>
-                          <span style={{ color: owned ? "#4a4" : "#bbc", fontSize: 10 }}>{it.name}</span>
-                          <span style={{ color: "#99aacc", fontSize: 8, marginLeft: 3 }}>+{it.atk || it.def || ""}</span>
+                          <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{it.name}</span>
+                          <span style={{ color: "#bbccee", fontSize: 8, marginLeft: 3 }}>+{it.atk || it.def || ""}</span>
                           {Object.keys(it.mats).length > 0 ? (<span style={{ marginLeft: 3 }}><MatCost mats={it.mats} state={gs} /></span>) : null}
                         </div>
                         {owned ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓</span>)
@@ -1079,21 +1079,21 @@ export default function App() {
               ))}
 
               <Sec title="☯️ Meridian Manuals" color="#0f0">
-                <div style={{ fontSize: 9, color: "#aabbdd", marginBottom: 6 }}>Your scripture shapes how meridian training develops your stats.</div>
+                <div style={{ fontSize: 9, color: "#ccddee", marginBottom: 6 }}>Your scripture shapes how meridian training develops your stats.</div>
                 {MERIDIAN_MANUALS.filter(m => m.cost > 0).map(manual => {
                   const owned = (gs.ownedMeridianManuals || ["wanderer"]).includes(manual.id);
                   return (
-                    <div key={manual.id} style={{ padding: "5px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={manual.id} style={{ padding: "5px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <span style={{ marginRight: 3 }}>{manual.icon}</span>
-                          <span style={{ color: owned ? "#4a4" : "#bbc", fontSize: 10 }}>{manual.name}</span>
+                          <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{manual.name}</span>
                           <span style={{ fontSize: 7, color: "#f80", marginLeft: 4 }}>Tier {manual.tier}</span>
                         </div>
                         {owned ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓</span>)
                           : (<Btn onClick={() => buyMeridianManual(manual)} disabled={!canAfford(manual.cost, manual.shopMats)} small color="#0f0">{manual.cost}g</Btn>)}
                       </div>
-                      <div style={{ fontSize: 8, color: "#99aacc", marginTop: 2 }}>{manual.desc}</div>
+                      <div style={{ fontSize: 8, color: "#bbccee", marginTop: 2 }}>{manual.desc}</div>
                       <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
                         <span style={{ fontSize: 8, color: "#6a6" }}>▸ {manual.passiveDesc}</span>
                         {manual.recommendedSkills.length > 0 && (
@@ -1109,21 +1109,21 @@ export default function App() {
               </Sec>
 
               <Sec title="💪 Body Cultivation" color="#0af">
-                <div style={{ fontSize: 9, color: "#aabbdd", marginBottom: 6 }}>Master one technique per run. Evolves at Lv.10. Expand slots via regression.</div>
+                <div style={{ fontSize: 9, color: "#ccddee", marginBottom: 6 }}>Master one technique per run. Evolves at Lv.10. Expand slots via regression.</div>
                 {BODY_TECHNIQUES.map(tech => {
                   const owned = !!(gs.ownedBodyTechs || {})[tech.id];
                   return (
-                    <div key={tech.id} style={{ padding: "5px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={tech.id} style={{ padding: "5px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <span style={{ marginRight: 4 }}>{tech.icon}</span>
-                          <span style={{ color: owned ? "#4a4" : "#bbc", fontSize: 10 }}>{tech.tiers[0].name}</span>
+                          <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{tech.tiers[0].name}</span>
                           <span style={{ fontSize: 7, color: "#0af", marginLeft: 4 }}>→ {tech.tiers[1].name} → {tech.tiers[2].name}</span>
                         </div>
                         {owned ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓ Owned</span>)
                           : (<Btn onClick={() => buyBodyTech(tech)} disabled={!canAfford(tech.shopCost, tech.shopMats)} small color="#0af">{tech.shopCost}g</Btn>)}
                       </div>
-                      <div style={{ fontSize: 8, color: "#99aacc", marginTop: 2 }}>{tech.desc}</div>
+                      <div style={{ fontSize: 8, color: "#bbccee", marginTop: 2 }}>{tech.desc}</div>
                       <div style={{ fontSize: 8, color: "#4a6", marginTop: 1 }}>
                         {Object.entries(tech.tiers[0].perLevel).map(([k,v]) => {
                           if (k === 'poolBonus') return `+${v}/lv raw cap`;
@@ -1143,9 +1143,9 @@ export default function App() {
                   const owned = !!gs.skills[m.skill];
                   const def2 = SKILL_DEFINITIONS[m.skill];
                   return (
-                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div>
-                        <span style={{ color: owned ? "#4a4" : "#bbc", fontSize: 10 }}>{def2?.icon} {def2?.name}</span>
+                        <span style={{ color: owned ? "#4a4" : "#ccd", fontSize: 10 }}>{def2?.icon} {def2?.name}</span>
                         {getManual(gs.meridianManualId || "wanderer").recommendedSkills.includes(m.skill) && (
                           <span style={{ fontSize: 7, color: "#fa6", marginLeft: 4 }}>★ Rec</span>
                         )}
@@ -1163,11 +1163,11 @@ export default function App() {
 
               <Sec title="💊 Pills">
                 {PILLS.map(p => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
                     <div>
                       <span style={{ marginRight: 2 }}>{p.icon}</span>
-                      <span style={{ color: "#bbc", fontSize: 10 }}>{p.name}</span>
-                      <span style={{ color: "#99aacc", fontSize: 8, marginLeft: 3 }}>{p.desc}</span>
+                      <span style={{ color: "#ccd", fontSize: 10 }}>{p.name}</span>
+                      <span style={{ color: "#bbccee", fontSize: 8, marginLeft: 3 }}>{p.desc}</span>
                       {Object.keys(p.mats).length > 0 ? (<span style={{ marginLeft: 3 }}><MatCost mats={p.mats} state={gs} /></span>) : null}
                     </div>
                     <Btn onClick={() => usePill(p)} disabled={!canAfford(p.cost, p.mats)} small color="#0f0">{p.cost}g</Btn>
@@ -1203,13 +1203,13 @@ export default function App() {
                   }
                   return (
                     <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                      <span style={{ fontSize: 8, color: "#99aacc", width: 14 }}>#{slotIdx + 1}</span>
+                      <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
                       <Btn onClick={() => setGs(p => ({ ...p, activeSkill: skillId }))}
-                        color={isActive ? "#0ff" : "#bbc"} small glow={isActive}>
+                        color={isActive ? "#0ff" : "#ccd"} small glow={isActive}>
                         {d?.icon} {d?.name} {sk ? `Lv.${sk.level}` : ""}
                       </Btn>
                       {ownedActive.length > 1 && (
-                        <Btn onClick={cycleSlot} color="#99aacc" small>⟳</Btn>
+                        <Btn onClick={cycleSlot} color="#bbccee" small>⟳</Btn>
                       )}
                     </div>
                   );
@@ -1218,7 +1218,7 @@ export default function App() {
                 {(gs.skillSlots || 1) < MAX_SKILL_SLOTS ? (() => {
                   const slotCost = SKILL_SLOT_COSTS[(gs.skillSlots || 1) - 1];
                   return slotCost ? (
-                    <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #1a1a2e" }}>
+                    <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
                       <Btn onClick={() => purchase("Seal Breaker", slotCost.cost, slotCost.mats, s => ({
                         ...s,
                         skillSlots: (s.skillSlots || 1) + 1,
@@ -1226,7 +1226,7 @@ export default function App() {
                       }))} disabled={!canAfford(slotCost.cost, slotCost.mats)} color="#fc0" small>
                         🔓 Open Slot — {slotCost.cost}g
                       </Btn>
-                      <div style={{ fontSize: 7, color: "#99aacc", marginTop: 2 }}>Meridian Seal Breaker: permanent skill slot</div>
+                      <div style={{ fontSize: 7, color: "#bbccee", marginTop: 2 }}>Meridian Seal Breaker: permanent skill slot</div>
                     </div>
                   ) : null;
                 })() : (
@@ -1242,11 +1242,11 @@ export default function App() {
                   const isEquipped = (gs.equippedSkills || ["basicAttack"]).includes(id);
                   const isPassive = d.type === "passive";
                   return (
-                    <div key={id} style={{ padding: "4px 0", borderBottom: "1px solid #0d0d18" }}>
+                    <div key={id} style={{ padding: "4px 0", borderBottom: "1px solid #2c2c48" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <span style={{ marginRight: 2 }}>{d.icon}</span>
-                          <span style={{ color: gs.activeSkill === id ? "#0ff" : isEquipped ? "#ccc" : "#aabbdd", fontWeight: 600, fontSize: 10 }}>{d.name}</span>
+                          <span style={{ color: gs.activeSkill === id ? "#0ff" : isEquipped ? "#ccc" : "#ccddee", fontWeight: 600, fontSize: 10 }}>{d.name}</span>
                           <span style={{ color: "#f80", fontSize: 9, marginLeft: 3 }}>Lv.{sk.level}</span>
                           {isPassive && <span style={{ fontSize: 7, color: "#4a4", marginLeft: 4 }}>PASSIVE</span>}
                           {!isPassive && isEquipped && <span style={{ fontSize: 7, color: "#0af", marginLeft: 4 }}>SLOTTED</span>}
@@ -1255,7 +1255,7 @@ export default function App() {
                           )}
                         </div>
                         {d.type === "active" && d.energyCost > 0 && (
-                          <span style={{ fontSize: 8, color: "#99aacc" }}>x{d.dmgMult} {d.energyCost}EN</span>
+                          <span style={{ fontSize: 8, color: "#bbccee" }}>x{d.dmgMult} {d.energyCost}EN</span>
                         )}
                       </div>
                       {isPassive && (
@@ -1277,17 +1277,17 @@ export default function App() {
           {gs.tab === "residence" ? (
             <div>
               <Sec title={`${HOUSING[gs.housingLevel].icon} ${HOUSING[gs.housingLevel].name}`} color="#fc0">
-                <div style={{ fontSize: 9, color: "#aabbdd" }}>Rest x{HOUSING[gs.housingLevel].restMult} | Rent: {HOUSING[gs.housingLevel].rent}g/wk</div>
+                <div style={{ fontSize: 9, color: "#ccddee" }}>Rest x{HOUSING[gs.housingLevel].restMult} | Rent: {HOUSING[gs.housingLevel].rent}g/wk</div>
                 {nextHouse ? (<Btn onClick={() => purchase(nextHouse.name, nextHouse.cost, nextHouse.mats, s => ({ ...s, housingLevel: s.housingLevel + 1 }))} disabled={!canAfford(nextHouse.cost, nextHouse.mats)} small color="#fc0" style={{ marginTop: 4 }}>→ {nextHouse.name} (x{nextHouse.restMult}) {nextHouse.cost}g</Btn>) : null}
               </Sec>
               <Sec title={`🛏️ ${BEDS[gs.bedLevel].name}`} color="#8af">
-                <div style={{ fontSize: 9, color: "#aabbdd" }}>+{BEDS[gs.bedLevel].restBonus}/s</div>
+                <div style={{ fontSize: 9, color: "#ccddee" }}>+{BEDS[gs.bedLevel].restBonus}/s</div>
                 {nextBed ? (<Btn onClick={() => purchase(nextBed.name, nextBed.cost, nextBed.mats, s => ({ ...s, bedLevel: s.bedLevel + 1 }))} disabled={!canAfford(nextBed.cost, nextBed.mats)} small color="#8af" style={{ marginTop: 4 }}>→ {nextBed.name} (+{nextBed.restBonus}/s) {nextBed.cost}g</Btn>) : null}
               </Sec>
               <Sec title="Upgrades">
                 {RESIDENCE_UPGRADES.map(u => (
-                  <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
-                    <div><span style={{ marginRight: 2 }}>{u.icon}</span><span style={{ color: gs.residenceUpgrades[u.field] ? "#4a4" : "#bbc", fontSize: 10 }}>{u.name}</span><span style={{ fontSize: 8, color: "#99aacc", marginLeft: 3 }}>{u.desc}</span></div>
+                  <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                    <div><span style={{ marginRight: 2 }}>{u.icon}</span><span style={{ color: gs.residenceUpgrades[u.field] ? "#4a4" : "#ccd", fontSize: 10 }}>{u.name}</span><span style={{ fontSize: 8, color: "#bbccee", marginLeft: 3 }}>{u.desc}</span></div>
                     {gs.residenceUpgrades[u.field] ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓</span>)
                       : (<Btn onClick={() => purchase(u.name, u.cost, u.mats, s => ({ ...s, residenceUpgrades: { ...s.residenceUpgrades, [u.field]: true } }))} disabled={!canAfford(u.cost, u.mats)} small color="#fc0">{u.cost}g</Btn>)}
                   </div>
@@ -1321,7 +1321,7 @@ export default function App() {
 
                   const drawColor = cyclesLeft < 3 ? "#f44" : "#4a4";
                   return (
-                    <div key={j.id} style={{ background: active ? "#1a1a08" : "#0c0c1a", borderRadius: 5, padding: 8, border: `1px solid ${active ? "#fc0" : "#2a2a4e"}`, marginBottom: 5 }}>
+                    <div key={j.id} style={{ background: active ? "#1a1a08" : "#0c0c1a", borderRadius: 5, padding: 8, border: `1px solid ${active ? "#fc0" : "#3e3e62"}`, marginBottom: 5 }}>
                       {/* Header row */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1332,7 +1332,7 @@ export default function App() {
                         </div>
                         {!active
                           ? <Btn onClick={() => startWork(j.id)} disabled={gs.activity === "dungeon" || !hasMats(gs, recipe.input)} small color="#fc0">Start</Btn>
-                          : <Btn onClick={stopActivity} small color="#bbc">Stop</Btn>}
+                          : <Btn onClick={stopActivity} small color="#ccd">Stop</Btn>}
                       </div>
 
                       {/* XP row: label + bar */}
@@ -1340,7 +1340,7 @@ export default function App() {
                         <span style={{ fontSize: 8, color: "#f80", whiteSpace: "nowrap", minWidth: 50 }}>XP {jXp}/{xpNeeded}</span>
                         <div style={{ flex: 1 }}><Bar value={jXp} max={xpNeeded} color="#f80" h={8} /></div>
                         {nextRecipe
-                          ? <span style={{ fontSize: 7, color: "#99aacc", whiteSpace: "nowrap" }}>Lv.{nextRecipe.level} → {nextRecipe.product}</span>
+                          ? <span style={{ fontSize: 7, color: "#bbccee", whiteSpace: "nowrap" }}>Lv.{nextRecipe.level} → {nextRecipe.product}</span>
                           : <span style={{ fontSize: 7, color: "#4a4", whiteSpace: "nowrap" }}>max</span>}
                       </div>
 
@@ -1352,7 +1352,7 @@ export default function App() {
                               style={{ fontSize: 8, padding: "2px 6px", borderRadius: 3, cursor: "pointer",
                                 background: idx === selectedRecipeIdx ? "#2a1a00" : "#1a1a36",
                                 border: `1px solid ${idx === selectedRecipeIdx ? "#fc0" : "#333"}`,
-                                color: idx === selectedRecipeIdx ? "#fc0" : "#aabbdd" }}>
+                                color: idx === selectedRecipeIdx ? "#fc0" : "#ccddee" }}>
                               {r.product}
                             </div>
                           ))}
@@ -1360,8 +1360,8 @@ export default function App() {
                       )}
 
                       {/* Active recipe formula */}
-                      <div style={{ fontSize: 8, color: "#aabbcc", marginBottom: 5, background: "#181836", borderRadius: 3, padding: "3px 6px" }}>
-                        {Object.entries(recipe.input).map(([k, v]) => MAT_ICONS[k] + v).join(" + ")} → <span style={{ color: "#ddd" }}>{recipe.product}</span> <span style={{ color: "#fc0" }}>+{recipe.output}g</span> <span style={{ color: "#99aacc" }}>{recipe.time}s</span>
+                      <div style={{ fontSize: 8, color: "#bbccdd", marginBottom: 5, background: "#181836", borderRadius: 3, padding: "3px 6px" }}>
+                        {Object.entries(recipe.input).map(([k, v]) => MAT_ICONS[k] + v).join(" + ")} → <span style={{ color: "#ddd" }}>{recipe.product}</span> <span style={{ color: "#fc0" }}>+{recipe.output}g</span> <span style={{ color: "#bbccee" }}>{recipe.time}s</span>
                       </div>
 
                       {/* Drawdown row: label + bar */}
@@ -1370,7 +1370,7 @@ export default function App() {
                           {cyclesLeft === 0 ? "No mats" : `${cyclesLeft} cycles`}
                         </span>
                         <div style={{ flex: 1 }}><Bar value={Math.min(cyclesLeft, maxCycles)} max={maxCycles} color={drawColor} h={8} /></div>
-                        <span style={{ fontSize: 7, color: "#99aacc", whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: 7, color: "#bbccee", whiteSpace: "nowrap" }}>
                           {cyclesLeft === 0 ? "—" : `~${timeStr}`}
                         </span>
                       </div>
@@ -1389,8 +1389,8 @@ export default function App() {
               </Sec>
               <Sec title="👤 Hire" color="#0af">
                 {HIRES.map(h => (
-                  <div key={h.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
-                    <span style={{ color: gs.hiredWorkers[h.job] ? "#4a4" : "#bbc", fontSize: 10 }}>{h.name}</span>
+                  <div key={h.id} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                    <span style={{ color: gs.hiredWorkers[h.job] ? "#4a4" : "#ccd", fontSize: 10 }}>{h.name}</span>
                     {gs.hiredWorkers[h.job] ? (<span style={{ fontSize: 8, color: "#4a4" }}>✓</span>)
                       : (<Btn onClick={() => purchase(h.name, h.cost, h.mats, s => ({ ...s, hiredWorkers: { ...s.hiredWorkers, [h.job]: true } }))} disabled={!canAfford(h.cost, h.mats)} small color="#0af">{h.cost}g</Btn>)}
                   </div>
@@ -1416,38 +1416,38 @@ export default function App() {
                 )}
               </Sec>
               <Sec title="🍖 Food" color="#fc0">
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aabbdd" }}>Daily</span><span style={{ color: "#fc0", fontWeight: 700 }}>-{FOOD_DAILY_COST}g</span></div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#aabbdd" }}>Weekly</span><span style={{ color: "#fc0", fontWeight: 700 }}>-{FOOD_DAILY_COST * 7}g</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#ccddee" }}>Daily</span><span style={{ color: "#fc0", fontWeight: 700 }}>-{FOOD_DAILY_COST}g</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#ccddee" }}>Weekly</span><span style={{ color: "#fc0", fontWeight: 700 }}>-{FOOD_DAILY_COST * 7}g</span></div>
               </Sec>
               <Sec title="📈 Income" color="#0f0">
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ color: "#aabbdd" }}>Avg</span><span style={{ color: "#0f0", fontWeight: 700 }}>+{avgIncome}g/d</span></div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}><span style={{ color: "#ccddee" }}>Avg</span><span style={{ color: "#0f0", fontWeight: 700 }}>+{avgIncome}g/d</span></div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
                   {gs.dailyIncome.map((inc, i) => (
                     <div key={i} style={{ textAlign: "center", background: i === gs.weekDay ? "#0f022" : "#18183a", borderRadius: 3, padding: 3, border: `1px solid ${i === gs.weekDay ? "#0f044" : "#151525"}` }}>
-                      <div style={{ fontSize: 7, color: i === gs.weekDay ? "#0f0" : "#99aacc" }}>D{i + 1}</div>
-                      <div style={{ fontSize: 9, color: i === gs.weekDay ? "#0f0" : "#aabbdd", fontWeight: 700 }}>{fmt(inc)}</div>
+                      <div style={{ fontSize: 7, color: i === gs.weekDay ? "#0f0" : "#bbccee" }}>D{i + 1}</div>
+                      <div style={{ fontSize: 9, color: i === gs.weekDay ? "#0f0" : "#ccddee", fontWeight: 700 }}>{fmt(inc)}</div>
                     </div>
                   ))}
                 </div>
               </Sec>
               <Sec title="📋 Purchases" color="#f80">
-                {gs.weekPurchases.length === 0 ? (<div style={{ fontSize: 9, color: "#99aacc" }}>None.</div>) : (
+                {gs.weekPurchases.length === 0 ? (<div style={{ fontSize: 9, color: "#bbccee" }}>None.</div>) : (
                   <div style={{ maxHeight: 120, overflowY: "auto" }}>
                     {gs.weekPurchases.map((p, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #0d0d18" }}>
-                        <span style={{ fontSize: 9, color: "#bbc" }}>{p.name}</span>
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                        <span style={{ fontSize: 9, color: "#ccd" }}>{p.name}</span>
                         <span style={{ fontSize: 9, color: "#f44" }}>-{p.cost}g</span>
                       </div>
                     ))}
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingTop: 3, borderTop: "1px solid #2a2a3e" }}>
-                  <span style={{ color: "#aabbdd" }}>Total</span><span style={{ color: "#f44", fontWeight: 700 }}>-{fmt(gs.totalWeekSpend)}g</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, paddingTop: 3, borderTop: "1px solid #3c3c58" }}>
+                  <span style={{ color: "#ccddee" }}>Total</span><span style={{ color: "#f44", fontWeight: 700 }}>-{fmt(gs.totalWeekSpend)}g</span>
                 </div>
               </Sec>
               <Sec title="🏦 Balance" color="#fc0">
                 <div style={{ fontSize: 16, color: "#fc0", fontWeight: 700, textAlign: "center" }}>💰 {fmt(gs.gold)}g</div>
-                <div style={{ fontSize: 9, color: "#aabbdd", textAlign: "center" }}>Day {gs.dayCount} | Wk {gs.weekDay + 1}/7</div>
+                <div style={{ fontSize: 9, color: "#ccddee", textAlign: "center" }}>Day {gs.dayCount} | Wk {gs.weekDay + 1}/7</div>
               </Sec>
             </div>
           ) : null}
@@ -1463,7 +1463,7 @@ export default function App() {
                   const pending = calcRegressionPts(gs.highestFloors, gs.medTechLevel);
                   const highFloorSum = Object.values(gs.highestFloors).reduce((a, b) => a + b, 0);
                   return (
-                    <div style={{ fontSize: 8, color: "#aabbdd", marginTop: 3 }}>
+                    <div style={{ fontSize: 8, color: "#ccddee", marginTop: 3 }}>
                       {pending > 0
                         ? <span style={{ color: "#a6f88" }}>Reset now → <span style={{ color: "#a6f", fontWeight: 700 }}>+{pending} pts</span></span>
                         : <span>Reach F-10 to earn points on reset. ({highFloorSum}/10 floors)</span>
@@ -1473,7 +1473,7 @@ export default function App() {
                 })()}
                 <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                   <Btn onClick={() => setGs(p => ({ ...p, showConfirm: true }))} color="#f44" small>☠ Reset</Btn>
-                  <Btn onClick={hardReset} color="#bbc" small>🗑️ Full Wipe</Btn>
+                  <Btn onClick={hardReset} color="#ccd" small>🗑️ Full Wipe</Btn>
                 </div>
               </Sec>
               {REGRESSION_UPGRADES.map(u => {
@@ -1481,12 +1481,12 @@ export default function App() {
                 const maxed = curLv >= u.maxLevel;
                 const canBuy = gs.regression.pts >= u.cost && !maxed;
                 return (
-                  <div key={u.id} style={{ background: "#1a1a3a", borderRadius: 5, padding: 7, border: `1px solid ${maxed ? "#4a4" : canBuy ? "#a6f44" : "#2a2a4e"}`, marginBottom: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={u.id} style={{ background: "#1a1a3a", borderRadius: 5, padding: 7, border: `1px solid ${maxed ? "#4a4" : canBuy ? "#a6f44" : "#3e3e62"}`, marginBottom: 3, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <span style={{ marginRight: 3 }}>{u.icon}</span>
                       <span style={{ color: maxed ? "#4a4" : "#ccc", fontWeight: 600, fontSize: 10 }}>{u.name}</span>
                       <span style={{ color: "#f80", fontSize: 9, marginLeft: 3 }}>{curLv}/{u.maxLevel}</span>
-                      <div style={{ fontSize: 7, color: "#aabbdd", marginLeft: 19 }}>{u.desc}</div>
+                      <div style={{ fontSize: 7, color: "#ccddee", marginLeft: 19 }}>{u.desc}</div>
                     </div>
                     <Btn onClick={() => buyRegressionUpgrade(u)} disabled={!canBuy} small color={maxed ? "#4a4" : "#a6f"}>{maxed ? "MAX" : u.cost + "pt"}</Btn>
                   </div>
@@ -1498,7 +1498,7 @@ export default function App() {
         </div>
 
         {/* ═══ LOG PANEL ═══ */}
-        <div style={{ width: 170, background: "#18183a", borderLeft: "1px solid #151525", padding: 5, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", boxSizing: "border-box" }}>
+        <div style={{ width: 170, background: "#18183a", borderLeft: "1px solid #2e2e48", padding: 5, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden", boxSizing: "border-box" }}>
           <div style={{ fontSize: 8, color: "#2a2a3e", textTransform: "uppercase", letterSpacing: 2, marginBottom: 2, flexShrink: 0 }}>Log</div>
           <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
             {[...gs.log].reverse().map((msg, i) => {
@@ -1511,7 +1511,7 @@ export default function App() {
               else if (msg.includes("💎")) c = "#f80";
               else if (msg.includes("💰")) c = "#fc0";
               else if (msg.includes("📖")) c = "#0af";
-              return (<div key={i} style={{ fontSize: 8, padding: "1px 0", borderBottom: "1px solid #0d0d1a", color: c }}>{msg}</div>);
+              return (<div key={i} style={{ fontSize: 8, padding: "1px 0", borderBottom: "1px solid #2a2a44", color: c }}>{msg}</div>);
             })}
           </div>
         </div>
@@ -1522,9 +1522,9 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "#000c", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}>
           <div style={{ background: "#12122a", border: "1px solid #f44", borderRadius: 10, padding: 18, maxWidth: 340, textAlign: "center" }}>
             <div style={{ fontFamily: "'Orbitron'", fontSize: 14, color: "#f44", marginBottom: 8 }}>☠ RESET TIMELINE?</div>
-            <div style={{ fontSize: 10, color: "#bbc", marginBottom: 12 }}>All progress lost. Earn pts from floors + med tech.</div>
+            <div style={{ fontSize: 10, color: "#ccd", marginBottom: 12 }}>All progress lost. Earn pts from floors + med tech.</div>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              <Btn onClick={() => setGs(p => ({ ...p, showConfirm: false }))} color="#bbc">Cancel</Btn>
+              <Btn onClick={() => setGs(p => ({ ...p, showConfirm: false }))} color="#ccd">Cancel</Btn>
               <Btn onClick={() => { setGs(p => ({ ...p, showConfirm: false })); manualReset(); }} color="#f44">RESET</Btn>
             </div>
           </div>
