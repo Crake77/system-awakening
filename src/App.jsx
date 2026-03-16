@@ -569,33 +569,63 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* ROW 6 — Footer info */}
-                    <div style={{ ...cell("#181838", "#1a3a5e"), borderRadius: "0 0 6px 6px" }}>
-                      {(() => {
-                        const martial = (gs.equippedMartialSkills || ["basicMartialArts"]).map(id => {
-                          const def = MARTIAL_SKILLS[id]; const st = (gs.martialSkills || {})[id];
-                          if (!def || !st) return null;
-                          const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
-                          return `${def.icon} ${def.levels[lv].name}`;
-                        }).filter(Boolean).join(" → ");
-                        const essence = (gs.equippedEssenceSkills || []).map(id => {
-                          const def = ESSENCE_SKILLS[id]; const st = (gs.essenceSkills || {})[id];
-                          if (!def || !st) return null;
-                          const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
-                          const cd = (gs.essenceCooldowns || {})[id] || 0;
-                          return `${def.icon} ${def.levels[lv].name}${cd > 0 ? ` (${cd.toFixed(1)}s)` : " ✓"}`;
-                        }).filter(Boolean).join("  ");
+                    {/* ROW 6 — Martial skill */}
+                    <div style={{ ...cell("#181838", "#1a3a5e") }}>
+                      <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>⚔ Martial</div>
+                      {(gs.equippedMartialSkills || ["basicMartialArts"]).map((id, i) => {
+                        const def = MARTIAL_SKILLS[id];
+                        const st = (gs.martialSkills || {})[id] || { level: 1 };
+                        if (!def) return null;
+                        const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
                         return (
-                          <div>
-                            <div style={{ fontSize: 8, color: "#f80" }}>{martial}</div>
-                            {essence ? <div style={{ fontSize: 7, color: "#a6f", marginTop: 1 }}>{essence}</div> : null}
+                          <div key={id} style={{ fontSize: 8, color: "#f80" }}>
+                            {def.icon} {def.levels[lv].name}
+                            <span style={{ color: "#bbccee", marginLeft: 3 }}>Lv.{st.level || 1}</span>
+                            {i > 0 && <span style={{ color: "#99aacc", marginLeft: 3 }}>+{i * 30}%</span>}
                           </div>
                         );
-                      })()}
-                      {gs.lastHit > 0 ? <div style={{ fontSize: 10, color: "#f44", fontWeight: 700, marginTop: 2 }}>-{gs.lastHit} HP</div> : <div style={{ height: 14 }} />}
+                      })}
+                    </div>
+                    <div style={{ ...cell("#0e0a0a", monColor + "66") }}>
+                      <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>⚔ Martial</div>
+                      <div style={{ fontSize: 8, color: monColor }}>
+                        {mon.martialName || "Strike"}
+                      </div>
+                    </div>
+
+                    {/* ROW 7 — Essence skill + last hit */}
+                    <div style={{ ...cell("#181838", "#1a3a5e"), borderRadius: "0 0 6px 6px" }}>
+                      <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>✦ Essence</div>
+                      {(gs.equippedEssenceSkills || []).length === 0
+                        ? <div style={{ fontSize: 7, color: "#556" }}>No skill equipped</div>
+                        : (gs.equippedEssenceSkills || []).map(id => {
+                            const def = ESSENCE_SKILLS[id];
+                            const st = (gs.essenceSkills || {})[id] || { level: 1 };
+                            if (!def) return null;
+                            const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                            const cd = (gs.essenceCooldowns || {})[id] || 0;
+                            return (
+                              <div key={id} style={{ fontSize: 8, color: "#a6f" }}>
+                                {def.icon} {def.levels[lv].name}
+                                <span style={{ marginLeft: 3, color: cd > 0 ? "#f80" : "#4a4" }}>
+                                  {cd > 0 ? `⏳${cd.toFixed(1)}s` : "✓"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                      {gs.lastHit > 0 && <div style={{ fontSize: 9, color: "#f44", fontWeight: 700, marginTop: 2 }}>-{gs.lastHit} HP</div>}
                     </div>
                     <div style={{ ...cell("#0e0a0a", monColor + "66"), borderRadius: "0 0 6px 6px" }}>
-                      <div style={{ fontSize: 7, color: "#bbccee" }}>Drops loot → convert via jobs</div>
+                      <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>✦ Essence</div>
+                      {mon.essenceSkill
+                        ? <div style={{ fontSize: 8, color: "#a6f" }}>
+                            ✦ {mon.essenceSkill.name}
+                            <span style={{ fontSize: 7, color: "#8899cc", marginLeft: 3 }}>
+                              {mon.essenceSkill.type === "cooldown" ? `${mon.essenceSkill.cooldown}s cd` : `HP<${Math.round(mon.essenceSkill.threshold * 100)}%`}
+                            </span>
+                          </div>
+                        : <div style={{ fontSize: 7, color: "#556" }}>No essence skill</div>
+                      }
                     </div>
 
                   </div>
@@ -606,10 +636,13 @@ export default function App() {
               {gs.activity === "dungeon" && gs.currentMonster && !gs.incursionActive ? (
                 <div style={{ background: "#141430", borderRadius: 5, border: "1px solid #363658", padding: "6px 8px", maxHeight: 110, overflowY: "auto", display: "flex", flexDirection: "column-reverse" }}>
                   {[...(gs.combatLog || [])].reverse().map((line, i) => {
-                    const color = line.startsWith("🗡") ? "#ccc"
-                      : line.startsWith("💥") ? "#f66"
+                    const color = line.startsWith("🗡") ? "#ddd"
+                      : line.startsWith("💥") ? "#f88"
                       : line.startsWith("💨") ? "#4cf"
                       : line.startsWith("🛡") ? "#48f"
+                      : line.startsWith("✦") && line.includes("+") ? "#4e4"
+                      : line.startsWith("✦") ? "#a6f"
+                      : line.startsWith("💚") ? "#4e4"
                       : line.startsWith("⚔") ? "#fc0"
                       : "#bbccdd";
                     return (

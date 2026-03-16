@@ -18,7 +18,12 @@ export function gameTick(prev) {
   const s = {
     ...prev,
     mats: { ...prev.mats },
-    skills: { ...prev.skills },
+    skills: { ...(prev.skills || {}) },
+    martialSkills: { ...(prev.martialSkills || { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } }) },
+    essenceSkills: { ...(prev.essenceSkills || { essenceStrike: { level: 1, exp: 0, expToNext: 60 } }) },
+    essenceCooldowns: { ...(prev.essenceCooldowns || {}) },
+    equippedMartialSkills: (prev.equippedMartialSkills || ["basicMartialArts"]).slice(),
+    equippedEssenceSkills: (prev.equippedEssenceSkills || ["essenceStrike"]).slice(),
     hiredWorkers: { ...prev.hiredWorkers },
     hireProgress: { ...prev.hireProgress },
     dailyIncome: prev.dailyIncome.slice(),
@@ -27,6 +32,11 @@ export function gameTick(prev) {
     equippedBodyTechs: (prev.equippedBodyTechs || []).slice(),
     combatLog: (prev.combatLog || []).slice(),
   };
+
+  // Ensure basicMartialArts always exists in martialSkills (defensive guard)
+  if (!s.martialSkills.basicMartialArts) {
+    s.martialSkills.basicMartialArts = { level: 1, exp: 0, expToNext: 50 };
+  }
 
   if (s.incursionWon) return s;
 
