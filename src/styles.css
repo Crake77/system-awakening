@@ -15,8 +15,8 @@ html {
 }
 
 body {
-  background: #0c0c22;
-  color: #ccc;
+  background: #141430;
+  color: #ddd;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 11px;
   height: 100%;
@@ -31,7 +31,7 @@ body {
 
 #root {
   height: 100%;
-  background: #0c0c22;
+  background: #141430;
 }
 
 button:hover:not(:disabled) { filter: brightness(1.25); }

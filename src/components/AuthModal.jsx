@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js';
 
 const inputStyle = {
   width: '100%', padding: '8px 10px', marginBottom: 12,
-  background: '#181830', border: '1px solid #666', borderRadius: 4,
+  background: '#1e1e3a', border: '1px solid #777', borderRadius: 4,
   color: '#eee', fontSize: 14, boxSizing: 'border-box',
 };
 
@@ -53,14 +53,14 @@ export default function AuthModal({ onClose }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }}>
       <div style={{
-        background: '#1e1e38', border: '1px solid #555', borderRadius: 8,
+        background: '#242448', border: '1px solid #666', borderRadius: 8,
         padding: 32, width: 320, color: '#ccc',
       }}>
         <h2 style={{ margin: '0 0 8px', color: '#a6f' }}>Sign In to Sync Saves</h2>
 
         {step === 'email' ? (
           <>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#aab' }}>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#bbc' }}>
               Enter your email — we'll send a 6-digit code.
             </p>
             <form onSubmit={handleSendCode}>
@@ -80,7 +80,7 @@ export default function AuthModal({ onClose }) {
           </>
         ) : (
           <>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#aab' }}>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#bbc' }}>
               Enter the 6-digit code sent to <strong style={{ color: '#ccc' }}>{email}</strong>.
             </p>
             <form onSubmit={handleVerifyCode}>
@@ -114,7 +114,7 @@ export default function AuthModal({ onClose }) {
           style={{
             marginTop: 12, width: '100%', padding: '7px',
             background: 'transparent', border: '1px solid #444',
-            borderRadius: 4, color: '#aab', fontSize: 13, cursor: 'pointer',
+            borderRadius: 4, color: '#bbc', fontSize: 13, cursor: 'pointer',
           }}
         >
           Play without signing in
