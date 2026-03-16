@@ -1,0 +1,12 @@
+{
+  "name": "System Awakening",
+  "short_name": "System Awakening",
+  "description": "A cultivation idle RPG",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08081a",
+  "theme_color": "#08081a",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

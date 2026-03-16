@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0d0d2b"/>
+      <stop offset="100%" stop-color="#050510"/>
+    </radialGradient>
+    <radialGradient id="coreglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a06fff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a06fff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="eyeglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffff" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#00ffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="180" height="180" fill="url(#bg)" rx="22"/>
+
+  <!-- Outer ring glow -->
+  <circle cx="90" cy="86" r="62" fill="url(#coreglow)"/>
+
+  <!-- Outer ring -->
+  <circle cx="90" cy="86" r="62" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.35"/>
+
+  <!-- Tick marks -->
+  <line x1="90" y1="24" x2="90" y2="34" stroke="#00ffff" stroke-width="2" opacity="0.7"/>
+  <line x1="90" y1="138" x2="90" y2="148" stroke="#00ffff" stroke-width="2" opacity="0.7"/>
+  <line x1="28" y1="86" x2="38" y2="86" stroke="#00ffff" stroke-width="2" opacity="0.7"/>
+  <line x1="142" y1="86" x2="152" y2="86" stroke="#00ffff" stroke-width="2" opacity="0.7"/>
+
+  <!-- Diagonal ticks -->
+  <line x1="46" y1="42" x2="52" y2="48" stroke="#00ffff" stroke-width="1" opacity="0.35"/>
+  <line x1="134" y1="42" x2="128" y2="48" stroke="#00ffff" stroke-width="1" opacity="0.35"/>
+  <line x1="46" y1="130" x2="52" y2="124" stroke="#00ffff" stroke-width="1" opacity="0.35"/>
+  <line x1="134" y1="130" x2="128" y2="124" stroke="#00ffff" stroke-width="1" opacity="0.35"/>
+
+  <!-- Inner ring -->
+  <circle cx="90" cy="86" r="46" fill="none" stroke="#a06fff" stroke-width="0.8" opacity="0.45"/>
+
+  <!-- Eye glow behind -->
+  <ellipse cx="90" cy="86" rx="34" ry="20" fill="url(#eyeglow)"/>
+
+  <!-- Eye outline -->
+  <ellipse cx="90" cy="86" rx="32" ry="19" fill="none" stroke="#00ffff" stroke-width="1.8" opacity="0.95" filter="url(#glow)"/>
+
+  <!-- Eye corner lines -->
+  <line x1="58" y1="86" x2="46" y2="86" stroke="#00ffff" stroke-width="1" opacity="0.5"/>
+  <line x1="122" y1="86" x2="134" y2="86" stroke="#00ffff" stroke-width="1" opacity="0.5"/>
+
+  <!-- Iris -->
+  <circle cx="90" cy="86" r="13" fill="none" stroke="#a06fff" stroke-width="1.5" opacity="0.9" filter="url(#glow)"/>
+
+  <!-- Iris inner detail -->
+  <circle cx="90" cy="86" r="9" fill="#1a0a3a" stroke="#a06fff" stroke-width="0.8" opacity="0.7"/>
+
+  <!-- Pupil -->
+  <circle cx="90" cy="86" r="5" fill="#a06fff" opacity="0.9" filter="url(#softglow)"/>
+  <circle cx="90" cy="86" r="2.5" fill="#ffffff" opacity="0.95"/>
+
+  <!-- Corner brackets -->
+  <polyline points="8,8 8,24 24,24" fill="none" stroke="#00ffff" stroke-width="1.2" opacity="0.4"/>
+  <polyline points="172,8 172,24 156,24" fill="none" stroke="#00ffff" stroke-width="1.2" opacity="0.4"/>
+  <polyline points="8,172 8,156 24,156" fill="none" stroke="#00ffff" stroke-width="1.2" opacity="0.4"/>
+  <polyline points="172,172 172,156 156,156" fill="none" stroke="#00ffff" stroke-width="1.2" opacity="0.4"/>
+
+  <!-- Bottom label -->
+  <text x="90" y="162" text-anchor="middle" font-family="monospace" font-size="8.5" font-weight="700"
+        fill="#00ffff" letter-spacing="5" opacity="0.9">SYSTEM</text>
+  <text x="90" y="173" text-anchor="middle" font-family="monospace" font-size="7" font-weight="400"
+        fill="#a06fff" letter-spacing="2.5" opacity="0.75">AWAKENING</text>
+</svg>
