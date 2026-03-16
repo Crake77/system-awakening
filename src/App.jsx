@@ -636,14 +636,17 @@ export default function App() {
                     {/* ROW 6 — Martial skill */}
                     <div style={{ ...cell("#181838", "#1a3a5e") }}>
                       <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>⚔ Martial</div>
-                      {(gs.equippedMartialSkills || []).map((slot, i) => {
-                        if (!slot) return null;
+                      {(gs.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }]).map((rawSlot, i) => {
+                        const slot = !rawSlot ? { schoolId: "basicMartialArts", techIdx: 0 }
+                          : typeof rawSlot === 'string' ? { schoolId: rawSlot, techIdx: 0 }
+                          : rawSlot;
                         const def = MARTIAL_SKILLS[slot.schoolId];
                         const school = (gs.martialSkills || {})[slot.schoolId];
-                        if (!def || !school) return null;
-                        const tl = (school.techLevels || [])[slot.techIdx];
-                        const lvData = def.levels[slot.techIdx];
+                        if (!def) return null;
+                        const techIdx = slot.techIdx || 0;
+                        const lvData = def.levels[techIdx] || def.levels[0];
                         if (!lvData) return null;
+                        const tl = school?.techLevels?.[techIdx];
                         return (
                           <div key={i} style={{ fontSize: 8, color: "#f80" }}>
                             {def.icon} {lvData.name}

@@ -24,8 +24,10 @@ export function gameTick(prev) {
     essenceCooldowns: { ...(prev.essenceCooldowns || {}) },
     martialMontages: { ...(prev.martialMontages || {}) },
     essenceMontages: { ...(prev.essenceMontages || {}) },
-    equippedMartialSkills: (prev.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }]).slice(),
-    equippedEssenceSkills: (prev.equippedEssenceSkills || [{ schoolId: "essenceStrike", techIdx: 0 }]).slice(),
+    equippedMartialSkills: (prev.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }])
+      .map(sl => (!sl ? { schoolId: "basicMartialArts", techIdx: 0 } : typeof sl === 'string' ? { schoolId: sl, techIdx: 0 } : sl)),
+    equippedEssenceSkills: (prev.equippedEssenceSkills || [{ schoolId: "essenceStrike", techIdx: 0 }])
+      .map(sl => (!sl ? { schoolId: "essenceStrike", techIdx: 0 } : typeof sl === 'string' ? { schoolId: sl, techIdx: 0 } : sl)),
     hiredWorkers: { ...prev.hiredWorkers },
     hireProgress: { ...prev.hireProgress },
     dailyIncome: prev.dailyIncome.slice(),
@@ -35,9 +37,37 @@ export function gameTick(prev) {
     combatLog: (prev.combatLog || []).slice(),
   };
 
-  // Ensure basicMartialArts always exists in martialSkills (defensive guard)
+  // Ensure all martial schools are in new format (techLevels), fix old flat format on-the-fly
+  Object.keys(s.martialSkills).forEach(sid => {
+    const sc = s.martialSkills[sid];
+    if (!sc || !sc.techLevels || sc.techLevels.length === 0) {
+      const def = MARTIAL_SKILLS[sid];
+      const expBase = def?.expBase || 50;
+      const techIdx = Math.max(0, (sc?.level || 1) - 1);
+      const techLevels = [];
+      for (let i = 0; i < techIdx; i++) techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+      techLevels.push({ level: Math.min(5, sc?.level || 1), exp: sc?.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+      s.martialSkills[sid] = { activeTechIdx: techIdx, techLevels };
+    }
+  });
   if (!s.martialSkills.basicMartialArts) {
     s.martialSkills.basicMartialArts = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] };
+  }
+  // Same for essence skills
+  Object.keys(s.essenceSkills).forEach(sid => {
+    const sc = s.essenceSkills[sid];
+    if (!sc || !sc.techLevels || sc.techLevels.length === 0) {
+      const def = ESSENCE_SKILLS[sid];
+      const expBase = def?.expBase || 60;
+      const techIdx = Math.max(0, (sc?.level || 1) - 1);
+      const techLevels = [];
+      for (let i = 0; i < techIdx; i++) techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+      techLevels.push({ level: Math.min(5, sc?.level || 1), exp: sc?.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+      s.essenceSkills[sid] = { activeTechIdx: techIdx, techLevels };
+    }
+  });
+  if (!s.essenceSkills.essenceStrike) {
+    s.essenceSkills.essenceStrike = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] };
   }
 
   // ═══ MONTAGE TIMERS ═══
@@ -413,7 +443,7 @@ export function gameTick(prev) {
     if (martialHits.length === 1) {
       const h = martialHits[0];
       s.combatLog = [...s.combatLog.slice(-11), h.dodged ? `🗡 ${h.name} — dodged!` : `🗡 ${h.name}: ${h.dmg} dmg`];
-    } else {
+    } else if (martialHits.length > 1) {
       const parts = martialHits.map(h => h.dodged ? "✗" : String(h.dmg)).join("→");
       s.combatLog = [...s.combatLog.slice(-11), `🗡 Combo [${parts}] = ${totalMartialDmg} dmg`];
     }
