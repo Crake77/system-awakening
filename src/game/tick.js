@@ -3,14 +3,14 @@
 
 import { generateMonster, rollDrops, generateIncursionBoss, DUNGEON_RANKS, FLOORS_PER_RANK } from '../data/monsters.js';
 import { SKILL_DEFINITIONS } from '../data/skills.js';
-import { JOBS } from '../data/jobs.js';
+import { JOBS, getActiveRecipe, getJobXpNeeded } from '../data/jobs.js';
 import { DAY_SECONDS, FOOD_DAILY_COST, INCURSION_BASE_TIMER } from '../data/regression.js';
 import { createInitialState } from './state.js';
 import {
-  getMaxHp, getMaxCombatEnergy, getMatCap, getPoolMax,
+  getMaxHp, getMaxCombatEnergy, getMatCap, getPoolMax, getRefinedCap,
   getRestRate, corePassiveRate, getProcessingRate,
-  getAtk, getDef, getDodge, getGoldMultiplier,
-  getRent, hasMats, subtractMats, addMats, regLevel,
+  getAtk, getDef, getDodge, getJobMultiplier,
+  getRent, hasMats, subtractMats, addMats, regLevel, calcRegressionPts,
 } from './helpers.js';
 
 export function gameTick(prev) {
@@ -21,11 +21,11 @@ export function gameTick(prev) {
     skills: { ...prev.skills },
     hiredWorkers: { ...prev.hiredWorkers },
     hireProgress: { ...prev.hireProgress },
-    meridians: prev.meridians.slice(),
     dailyIncome: prev.dailyIncome.slice(),
     weekPurchases: prev.weekPurchases.slice(),
-    bodyTechLevels: { ...prev.bodyTechLevels },
-    bodyTechsOwned: { ...prev.bodyTechsOwned },
+    ownedBodyTechs: { ...(prev.ownedBodyTechs || {}) },
+    equippedBodyTechs: (prev.equippedBodyTechs || []).slice(),
+    combatLog: (prev.combatLog || []).slice(),
   };
 
   if (s.incursionWon) return s;
@@ -49,13 +49,14 @@ export function gameTick(prev) {
     s.rawEssence = Math.min(poolMax, s.rawEssence + corePassiveRate(s) * 0.5);
   }
 
-  // ═══ MEDITATING (process raw → processed) ═══
+  // ═══ MEDITATING (process raw → refined) ═══
   if (s.activity === "meditating" && !s.incursionActive) {
+    const refinedCap = getRefinedCap(s);
     const rate = getProcessingRate(s) * 0.5;
-    const toProcess = Math.min(s.rawEssence, rate);
+    const toProcess = Math.min(s.rawEssence, rate, Math.max(0, refinedCap - s.processedEssence));
     if (toProcess > 0) {
       s.rawEssence -= toProcess;
-      s.processedEssence += toProcess;
+      s.processedEssence = Math.min(refinedCap, s.processedEssence + toProcess);
     }
   }
 
@@ -65,14 +66,34 @@ export function gameTick(prev) {
   // ═══ WORKING ═══
   if (s.activity === "working" && s.activeJob && !s.incursionActive) {
     const job = JOBS.find(j => j.id === s.activeJob);
-    if (job && hasMats(s, job.input)) {
-      s.jobProgress += 0.5;
-      if (s.jobProgress >= job.time) {
+    if (job) {
+      const recipe = getActiveRecipe(job, s.jobLevels, s.activeJobRecipe);
+      if (hasMats(s, recipe.input)) {
+        s.jobProgress += 0.5;
+        if (s.jobProgress >= recipe.time) {
+          s.jobProgress = 0;
+          s.mats = subtractMats(s.mats, recipe.input);
+          const goldGain = Math.floor(recipe.output * getJobMultiplier(s));
+          s.gold += goldGain;
+          s.todayIncome += goldGain;
+          s.log = [...s.log.slice(-80), `💰 ${job.name}: ${recipe.product} +${goldGain}g`];
+          // Job XP & leveling
+          const curLevel = (s.jobLevels || {})[job.id] || 0;
+          const curXp = ((s.jobXp || {})[job.id] || 0) + 1;
+          const xpNeeded = getJobXpNeeded(curLevel);
+          if (curXp >= xpNeeded) {
+            s.jobLevels = { ...(s.jobLevels || {}), [job.id]: curLevel + 1 };
+            s.jobXp = { ...(s.jobXp || {}), [job.id]: 0 };
+            s.log = [...s.log.slice(-80), `⬆ ${job.name} Lv.${curLevel + 1}!`];
+          } else {
+            s.jobXp = { ...(s.jobXp || {}), [job.id]: curXp };
+          }
+        }
+      } else {
+        s.activity = "idle";
+        s.activeJob = null;
         s.jobProgress = 0;
-        s.mats = subtractMats(s.mats, job.input);
-        s.gold += job.output;
-        s.todayIncome += job.output;
-        s.log = [...s.log.slice(-80), `💰 ${job.name}: +${job.output}g`];
+        s.log = [...s.log.slice(-80), `⚠ Out of materials for ${job.name}. Return to dungeon.`];
       }
     }
   }
@@ -81,13 +102,16 @@ export function gameTick(prev) {
   Object.keys(s.hiredWorkers).forEach(jobId => {
     if (!s.hiredWorkers[jobId]) return;
     const job = JOBS.find(j => j.id === jobId);
-    if (!job || !hasMats(s, job.input)) return;
+    if (!job) return;
+    const recipe = getActiveRecipe(job, s.jobLevels, s.activeJobRecipe);
+    if (!hasMats(s, recipe.input)) return;
     s.hireProgress[jobId] = (s.hireProgress[jobId] || 0) + 0.5;
-    if (s.hireProgress[jobId] >= job.time * 1.5) {
+    if (s.hireProgress[jobId] >= recipe.time * 1.5) {
       s.hireProgress[jobId] = 0;
-      s.mats = subtractMats(s.mats, job.input);
-      s.gold += job.output;
-      s.todayIncome += job.output;
+      s.mats = subtractMats(s.mats, recipe.input);
+      const goldGain = Math.floor(recipe.output * getJobMultiplier(s));
+      s.gold += goldGain;
+      s.todayIncome += goldGain;
     }
   });
 
@@ -151,8 +175,7 @@ export function gameTick(prev) {
 
   // ═══ REGRESSION ON DEATH ═══
   function triggerRegression() {
-    const highFloorSum = Object.values(s.highestFloors).reduce((a, b) => a + b, 0);
-    const pts = 1 + Math.floor(highFloorSum / 10) + Math.floor(s.medTechLevel / 2);
+    const pts = calcRegressionPts(s.highestFloors, s.medTechLevel);
     const newReg = {
       count: s.regression.count + 1,
       pts: s.regression.pts + pts,
@@ -160,13 +183,31 @@ export function gameTick(prev) {
       ups: { ...s.regression.ups },
     };
     const newState = createInitialState(newReg);
-    newState.log = [...newState.log, `💀 Killed.`, `⟳ +${pts} Regression Points!`];
-    newState.tab = "regression";
+    if (pts > 0) {
+      newState.log = [...newState.log, `💀 Killed.`, `⟳ +${pts} Regression Points!`];
+      newState.tab = "regression";
+    } else {
+      newState.log = [...newState.log, `💀 Killed. No points — reach F-10 first.`];
+    }
     return newState;
   }
 
+  // ═══ COMBAT TIMER ═══
+  // One exchange every 1.5 seconds — slow enough to read, fast enough to feel active
+  const COMBAT_INTERVAL = 1.5;
+  let combatReady = false;
+  if (s.incursionActive || (s.activity === "dungeon" && s.currentMonster)) {
+    s.combatTimer = (s.combatTimer || 0) + 0.5;
+    if (s.combatTimer >= COMBAT_INTERVAL) {
+      s.combatTimer = 0;
+      combatReady = true;
+    }
+  } else {
+    s.combatTimer = 0;
+  }
+
   // ═══ INCURSION COMBAT ═══
-  if (s.incursionActive && !s.incursionWon) {
+  if (combatReady && s.incursionActive && !s.incursionWon) {
     const boss = generateIncursionBoss(s.regression.count);
     let playerDmg = getAtk(s);
     const skill = SKILL_DEFINITIONS[s.activeSkill];
@@ -204,26 +245,54 @@ export function gameTick(prev) {
   }
 
   // ═══ DUNGEON COMBAT ═══
-  if (s.activity === "dungeon" && s.currentMonster && !s.incursionActive) {
+  if (combatReady && s.activity === "dungeon" && s.currentMonster && !s.incursionActive) {
     const mon = s.currentMonster;
+
+    // Guard: activeSkill must be in equippedSkills (handles old saves / edge cases)
+    const equipped = s.equippedSkills || ["basicAttack"];
+    if (!equipped.includes(s.activeSkill)) s.activeSkill = equipped[0] || "basicAttack";
+
     let playerDmg = getAtk(s);
     const skill = SKILL_DEFINITIONS[s.activeSkill];
-    let usedSkill = false;
+    let skillFired = false;
 
-    if (skill && skill.type === "active" && skill.energyCost > 0 && s.combatEnergy >= skill.energyCost) {
-      if (s.activeSkill === "manaShield") {
-        s.shield = true;
+    if (skill && skill.type === "active") {
+      if (skill.energyCost === 0) {
+        // Zero-cost skills (basicAttack) always fire
+        skillFired = true;
+      } else if (s.combatEnergy >= skill.energyCost) {
         s.combatEnergy -= skill.energyCost;
-      } else {
-        playerDmg = Math.floor(playerDmg * skill.dmgMult);
-        s.combatEnergy -= skill.energyCost;
-        usedSkill = true;
+        if (s.activeSkill === "manaShield") {
+          s.shield = true;
+        } else {
+          playerDmg = Math.floor(playerDmg * skill.dmgMult);
+        }
+        skillFired = true;
       }
     }
+    // Monster dodge check
+    const monDodged = Math.random() * 100 < (mon.dodge || 0);
+    if (monDodged) playerDmg = 0;
+    // Monster DEF reduces player damage
+    if (playerDmg > 0) playerDmg = Math.max(1, playerDmg - (mon.def || 0));
     s.monsterHp -= playerDmg;
 
-    // Skill experience
-    if (s.skills[s.activeSkill] && usedSkill) {
+    // Combat log — player action
+    {
+      const sk = SKILL_DEFINITIONS[s.activeSkill];
+      let entry;
+      if (monDodged) {
+        entry = `🗡 ${sk?.name || "Attack"} — ${mon.name} dodged!`;
+      } else if (sk && sk.energyCost > 0 && skillFired) {
+        entry = `🗡 ${sk.name} hits ${mon.name} for ${playerDmg} dmg`;
+      } else {
+        entry = `🗡 You strike ${mon.name} for ${playerDmg} dmg`;
+      }
+      s.combatLog = [...s.combatLog.slice(-11), entry];
+    }
+
+    // Skill experience — fires whenever the skill was actually used
+    if (s.skills[s.activeSkill] && skillFired) {
       const skillState = { ...s.skills[s.activeSkill] };
       skillState.exp += 1;
       if (skillState.exp >= skillState.expToNext) {
@@ -253,11 +322,17 @@ export function gameTick(prev) {
     // Monster attacks player
     if (Math.random() * 100 > getDodge(s)) {
       let monDmg = Math.max(1, mon.dmg - getDef(s));
+      const blocked = s.shield;
       if (s.shield) { monDmg = Math.floor(monDmg * 0.2); s.shield = false; }
       s.hp -= monDmg;
       s.lastHit = monDmg;
+      const entry = blocked
+        ? `🛡 Shield absorbs ${mon.name}'s attack — ${monDmg} dmg`
+        : `💥 ${mon.name} strikes you for ${monDmg} dmg`;
+      s.combatLog = [...s.combatLog.slice(-11), entry];
     } else {
       s.lastHit = 0;
+      s.combatLog = [...s.combatLog.slice(-11), `💨 You dodge ${mon.name}'s attack!`];
     }
 
     // Player dies
@@ -268,12 +343,9 @@ export function gameTick(prev) {
       s.log = [...s.log.slice(-80), `💀 Defeated on ${DUNGEON_RANKS[s.dungeonRank]}-${s.dungeonFloor}F`];
     }
 
-    // Monster killed → gold + essence + drops
+    // Monster killed → essence + loot drops (no direct gold — convert via jobs)
     if (s.monsterHp <= 0 && s.hp > 0) {
-      const goldGain = Math.floor(mon.gold * getGoldMultiplier(s) * (1 + s.dungeonFloor * 0.05));
       const essenceGain = mon.essence;
-      s.gold += goldGain;
-      s.todayIncome += goldGain;
 
       // Raw essence (capped by pool)
       const overflow = Math.max(0, (s.rawEssence + essenceGain) - poolMax);
@@ -282,10 +354,14 @@ export function gameTick(prev) {
         s.log = [...s.log.slice(-80), `⚠ Pool full! -${Math.floor(overflow)} essence lost!`];
       }
 
-      // Material drops
+      // Loot drops — convert via jobs to earn gold
       const drops = rollDrops(mon.rank, s.dungeonFloor, mon.isBoss);
       if (Object.keys(drops).length > 0) {
         s.mats = addMats(s.mats, drops, matCap);
+        if (mon.isBoss) {
+          const dropStr = Object.entries(drops).map(([k, v]) => `${v}x ${k}`).join(", ");
+          s.log = [...s.log.slice(-80), `📦 Boss loot: ${dropStr}`];
+        }
       }
 
       // Track highest floor
@@ -309,6 +385,7 @@ export function gameTick(prev) {
       s.currentMonster = nextMon;
       s.monsterHp = nextMon.hp;
       s.monsterMaxHp = nextMon.hp;
+      s.combatLog = [`⚔ ${nextMon.name} appears! HP: ${nextMon.hp}`];
     }
   }
 

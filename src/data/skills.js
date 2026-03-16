@@ -16,3 +16,12 @@ export const SKILL_MANUALS = [
   { id: "sm4", skill: "flameBurst", cost: 900, mats: { crystal: 5, manastone: 2 } },
   { id: "sm5", skill: "ironBody", cost: 600, mats: { iron: 8 } },
 ];
+
+// Costs to open additional skill slots via Meridian Seal Breaker pill
+// Each entry unlocks one more active skill slot — costs scale sharply
+export const SKILL_SLOT_COSTS = [
+  { cost: 800,   mats: { crystal: 3 } },         // slot 2
+  { cost: 5000,  mats: { manastone: 4 } },        // slot 3
+  { cost: 30000, mats: { voidstone: 3 } },        // slot 4
+];
+export const MAX_SKILL_SLOTS = 4;

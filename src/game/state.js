@@ -1,5 +1,4 @@
 // Initial game state and init function
-import { MERIDIANS } from '../data/cultivation.js';
 import { INCURSION_BASE_TIMER } from '../data/regression.js';
 
 export function createInitialState(regression) {
@@ -10,8 +9,8 @@ export function createInitialState(regression) {
     tab: "dungeon",
     gold: 100 * rl("r3"),
 
-    // Materials
-    mats: { leather: 0, iron: 0, bone: 0, crystal: 0, manastone: 0, voidstone: 0 },
+    // Materials — raw loot dropped by monsters, converted to gold via jobs
+    mats: { slimeGel: 0, leather: 0, iron: 0, bone: 0, crystal: 0, manastone: 0, voidstone: 0 },
 
     // Base stats (modified by meridians, pills, body techs)
     baseStr: 5, baseVit: 5, baseAgi: 5, baseInt: 5, baseWis: 5,
@@ -28,23 +27,32 @@ export function createInitialState(regression) {
     rawEssence: 0,
     poolCap: 50 + rl("r10") * 20,
     processedEssence: rl("r9") * 10,
+    refinedCap: 50,
     medTechLevel: 0,
     coreTier: -1, // -1 = no core
 
-    // Meridians
-    meridians: MERIDIANS.map(() => ({ opened: false, hardened: false })),
+    // Meridian training
+    meridianManualId: "wanderer",
+    meridianClicks: 0,
+    ownedMeridianManuals: ["wanderer"],
 
-    // Body techniques (id -> level, 0 = owned but not leveled)
-    bodyTechsOwned: {},
-    bodyTechLevels: {},
+    // Body cultivation — new slot-based system
+    ownedBodyTechs: {},     // { techId: { level: 0, tier: 0 } }
+    equippedBodyTechs: [],  // array of equipped tech IDs (max = bodySlots)
+    bodySlots: 1 + rl("r11"),
 
     // Equipment
     weapon: "w0", armor: "a0", accessory: "ac0",
     ownedWeapons: ["w0"], ownedArmors: ["a0"], ownedAccessories: ["ac0"],
 
     // Skills
-    skills: { basicAttack: { level: 1, exp: 0, expToNext: 999 } },
+    // skillSlots: how many active skill slots are open (default 1)
+    // equippedSkills: which active skills are slotted (max = skillSlots)
+    // Passive skills (windStep, ironBody) are always active when learned — no slot needed
+    skills: { basicAttack: { level: 1, exp: 0, expToNext: 50 } },
     activeSkill: "basicAttack",
+    skillSlots: 1,
+    equippedSkills: ["basicAttack"],
 
     // Activity: "idle" | "dungeon" | "meditating" | "working"
     activity: "idle",
@@ -60,6 +68,7 @@ export function createInitialState(regression) {
     // Jobs
     activeJob: null, jobProgress: 0,
     hiredWorkers: {}, hireProgress: {},
+    jobLevels: {}, jobXp: {}, activeJobRecipe: {},
 
     // Incursion
     incursionTimer: INCURSION_BASE_TIMER + rl("r7") * 30,
@@ -82,7 +91,7 @@ export function createInitialState(regression) {
     procBoostTimer: 0,
 
     // Combat state
-    shield: false, lastHit: 0,
+    shield: false, lastHit: 0, combatTimer: 0, combatLog: [],
 
     // UI
     showConfirm: false,
@@ -90,7 +99,11 @@ export function createInitialState(regression) {
     // Log
     log: reg.count > 0
       ? [`⟳ Loop #${reg.count}. ${reg.pts} pts available.`]
-      : ["[SYSTEM] Kill monsters → raw essence. Meditate → process it. Spend → get stronger.", "⚠ Incursion ETA: 15 min."],
+      : [
+          "[SYSTEM] Kill monsters → collect loot. Work jobs → convert loot to gold.",
+          "[SYSTEM] Meditate to process essence. Spend essence → get stronger.",
+          "⚠ Incursion ETA: 15 min.",
+        ],
 
     tick: 0,
   };

@@ -9,12 +9,22 @@
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: #0af3; border-radius: 2px; }
 
+html {
+  height: 100%;
+}
+
 body {
   background: #08081a;
   color: #bbb;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 11px;
-  min-height: 100vh;
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  height: 100%;
+  background: #08081a;
 }
 
 button:hover:not(:disabled) { filter: brightness(1.25); }

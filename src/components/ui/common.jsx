@@ -16,17 +16,26 @@ export function Bar({ value, max, color, label, h = 14 }) {
   );
 }
 
+// Expand 3-digit or 6-digit hex to rgba()
+function hexToRgba(hex, alpha) {
+  const c = hex.replace('#', '');
+  const [r, g, b] = c.length === 3
+    ? [parseInt(c[0] + c[0], 16), parseInt(c[1] + c[1], 16), parseInt(c[2] + c[2], 16)]
+    : [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export function Btn({ onClick, disabled, children, color = "#0af", small, glow }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
       padding: small ? "3px 7px" : "6px 12px",
-      background: disabled ? "#181825" : color + "18",
+      background: disabled ? "#181825" : hexToRgba(color, 0.1),
       color: disabled ? "#444" : color,
-      border: "1px solid " + (disabled ? "#282835" : color + "88"),
+      border: "1px solid " + (disabled ? "#282835" : hexToRgba(color, 0.55)),
       borderRadius: 4, cursor: disabled ? "default" : "pointer",
       fontSize: small ? 9 : 11,
       fontFamily: "'JetBrains Mono', monospace", fontWeight: 600,
-      boxShadow: glow ? `0 0 10px ${color}44` : "none",
+      boxShadow: glow ? `0 0 10px ${hexToRgba(color, 0.27)}` : "none",
       whiteSpace: "nowrap",
     }}>
       {children}
