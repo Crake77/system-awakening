@@ -49,74 +49,77 @@ const ACTIVITY_COLORS = { idle: "#444", dungeon: "#f44", meditating: "#a6f", wor
 const ACTIVITY_LABELS = { idle: "Idle", dungeon: "Dungeon", meditating: "Meditating", working: "Working" };
 
 // Migrate old saves to new skill system
+function normSchool(old, expBase) {
+  if (!old) return { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: expBase }] };
+  if (old.activeTechIdx !== undefined && old.techLevels?.length > 0) return old; // already new format
+  // Old flat format: { level, exp, expToNext }
+  const techIdx = Math.max(0, (old.level || 1) - 1);
+  const techLevels = [];
+  for (let i = 0; i < techIdx; i++) {
+    techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+  }
+  techLevels.push({ level: Math.min(5, old.level || 1), exp: old.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+  return { activeTechIdx: techIdx, techLevels };
+}
+
 function migrateState(s) {
-  // --- Martial skills: migrate flat { level, exp, expToNext } → { activeTechIdx, techLevels[] }
-  if (!s.martialSkills) {
-    s.martialSkills = { basicMartialArts: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] } };
-    s.equippedMartialSkills = [{ schoolId: "basicMartialArts", techIdx: 0 }];
-    s.martialSlots = 1;
-  } else {
-    const newMartial = {};
-    Object.keys(s.martialSkills).forEach(schoolId => {
-      const old = s.martialSkills[schoolId];
-      if (old.activeTechIdx !== undefined) {
-        newMartial[schoolId] = old; // already new format
-      } else {
-        // Old format: level = technique stage (1-based), convert to new
-        const def = MARTIAL_SKILLS[schoolId];
-        const expBase = def?.expBase || 50;
-        const techIdx = Math.max(0, (old.level || 1) - 1);
-        const techLevels = [];
-        for (let i = 0; i < techIdx; i++) {
-          techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
-        }
-        techLevels.push({ level: Math.min(5, old.level || 1), exp: old.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
-        newMartial[schoolId] = { activeTechIdx: techIdx, techLevels };
-      }
-    });
-    s.martialSkills = newMartial;
+  // --- Martial skills: migrate each school to { activeTechIdx, techLevels[] }
+  const rawMartial = s.martialSkills || {};
+  const newMartial = {};
+  Object.keys(rawMartial).forEach(schoolId => {
+    const def = MARTIAL_SKILLS[schoolId];
+    newMartial[schoolId] = normSchool(rawMartial[schoolId], def?.expBase || 50);
+  });
+  // Always ensure basicMartialArts exists
+  if (!newMartial.basicMartialArts) {
+    newMartial.basicMartialArts = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] };
   }
-  // Migrate equippedMartialSkills string[] → { schoolId, techIdx }[]
-  if (!s.equippedMartialSkills || (s.equippedMartialSkills.length > 0 && typeof s.equippedMartialSkills[0] === 'string')) {
-    const src = s.equippedMartialSkills || ["basicMartialArts"];
-    s.equippedMartialSkills = src.filter(Boolean).map(schoolId => ({
-      schoolId, techIdx: s.martialSkills[schoolId]?.activeTechIdx || 0,
-    }));
-  }
+  s.martialSkills = newMartial;
+
+  // Normalize every slot in equippedMartialSkills — handle null, strings, and bad schoolId refs
+  const rawEquipped = s.equippedMartialSkills || ["basicMartialArts"];
+  s.equippedMartialSkills = rawEquipped.map(slot => {
+    if (!slot) return { schoolId: "basicMartialArts", techIdx: 0 };
+    if (typeof slot === 'string') {
+      const schoolId = s.martialSkills[slot] ? slot : "basicMartialArts";
+      return { schoolId, techIdx: s.martialSkills[schoolId]?.activeTechIdx || 0 };
+    }
+    // Object format — ensure the referenced school exists
+    if (!s.martialSkills[slot.schoolId]) return { schoolId: "basicMartialArts", techIdx: 0 };
+    // Ensure techIdx is within bounds
+    const school = s.martialSkills[slot.schoolId];
+    const techIdx = (slot.techIdx != null && slot.techIdx < school.techLevels.length) ? slot.techIdx : 0;
+    return { schoolId: slot.schoolId, techIdx };
+  });
+  if (!s.martialSlots) s.martialSlots = 1;
   if (!s.martialMontages) s.martialMontages = {};
 
   // --- Essence skills: same migration
-  if (!s.essenceSkills) {
-    s.essenceSkills = { essenceStrike: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] } };
-    s.equippedEssenceSkills = [{ schoolId: "essenceStrike", techIdx: 0 }];
-    s.essenceSlots = 1;
-    s.essenceCooldowns = { essenceStrike: 0 };
-  } else {
-    const newEssence = {};
-    Object.keys(s.essenceSkills).forEach(schoolId => {
-      const old = s.essenceSkills[schoolId];
-      if (old.activeTechIdx !== undefined) {
-        newEssence[schoolId] = old;
-      } else {
-        const def = ESSENCE_SKILLS[schoolId];
-        const expBase = def?.expBase || 60;
-        const techIdx = Math.max(0, (old.level || 1) - 1);
-        const techLevels = [];
-        for (let i = 0; i < techIdx; i++) {
-          techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
-        }
-        techLevels.push({ level: Math.min(5, old.level || 1), exp: old.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
-        newEssence[schoolId] = { activeTechIdx: techIdx, techLevels };
-      }
-    });
-    s.essenceSkills = newEssence;
+  const rawEssence = s.essenceSkills || {};
+  const newEssence = {};
+  Object.keys(rawEssence).forEach(schoolId => {
+    const def = ESSENCE_SKILLS[schoolId];
+    newEssence[schoolId] = normSchool(rawEssence[schoolId], def?.expBase || 60);
+  });
+  if (!newEssence.essenceStrike) {
+    newEssence.essenceStrike = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] };
   }
-  if (!s.equippedEssenceSkills || (s.equippedEssenceSkills.length > 0 && typeof s.equippedEssenceSkills[0] === 'string')) {
-    const src = s.equippedEssenceSkills || ["essenceStrike"];
-    s.equippedEssenceSkills = src.filter(Boolean).map(schoolId => ({
-      schoolId, techIdx: s.essenceSkills[schoolId]?.activeTechIdx || 0,
-    }));
-  }
+  s.essenceSkills = newEssence;
+
+  const rawEquippedEss = s.equippedEssenceSkills || ["essenceStrike"];
+  s.equippedEssenceSkills = rawEquippedEss.map(slot => {
+    if (!slot) return { schoolId: "essenceStrike", techIdx: 0 };
+    if (typeof slot === 'string') {
+      const schoolId = s.essenceSkills[slot] ? slot : "essenceStrike";
+      return { schoolId, techIdx: s.essenceSkills[schoolId]?.activeTechIdx || 0 };
+    }
+    if (!s.essenceSkills[slot.schoolId]) return { schoolId: "essenceStrike", techIdx: 0 };
+    const school = s.essenceSkills[slot.schoolId];
+    const techIdx = (slot.techIdx != null && slot.techIdx < school.techLevels.length) ? slot.techIdx : 0;
+    return { schoolId: slot.schoolId, techIdx };
+  });
+  if (!s.essenceSlots) s.essenceSlots = 1;
+  if (!s.essenceCooldowns) s.essenceCooldowns = { essenceStrike: 0 };
   if (!s.essenceMontages) s.essenceMontages = {};
 
   // Clean up removed old-system fields
