@@ -48,16 +48,20 @@ export function createInitialState(regression) {
     // Passive skills (windStep, ironBody) — tracked here when purchased from shop
     skills: {},
 
-    // Martial Skills — all equipped slots fire every combat round (combo)
-    martialSkills: { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } },
-    equippedMartialSkills: ["basicMartialArts"],
+    // Martial Skills — each school tracks per-technique progress (5 sub-levels per technique)
+    // activeTechIdx: which technique is currently being trained
+    // techLevels[i]: { level, exp, expToNext } for technique i
+    martialSkills: { basicMartialArts: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] } },
+    equippedMartialSkills: [{ schoolId: "basicMartialArts", techIdx: 0 }],
     martialSlots: 1,
+    martialMontages: {}, // { schoolId: timerSeconds } — counting down to 0
 
-    // Essence Skills — auto-trigger by condition, drain combat energy
-    essenceSkills: { essenceStrike: { level: 1, exp: 0, expToNext: 60 } },
-    equippedEssenceSkills: ["essenceStrike"],
+    // Essence Skills — same 5-sub-level system, auto-trigger by condition
+    essenceSkills: { essenceStrike: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] } },
+    equippedEssenceSkills: [{ schoolId: "essenceStrike", techIdx: 0 }],
     essenceSlots: 1,
     essenceCooldowns: { essenceStrike: 0 },
+    essenceMontages: {}, // { schoolId: timerSeconds }
 
     // Activity: "idle" | "dungeon" | "meditating" | "working"
     activity: "idle",

@@ -39,15 +39,15 @@ export const MARTIAL_SKILLS = {
     icon: "🌊",
     expBase: 60,
     levels: [
-      { name: "Drifting Step",           dmgMult: 0.75 },
+      { name: "Drifting Step",           dmgMult: 0.4,  dodgeBuff: 0.15 }, // evasive strike
       { name: "Current Strike",          dmgMult: 1.0  },
-      { name: "Flowing Fist",            dmgMult: 1.35 },
+      { name: "Flowing Guard",           dmgMult: 0.5,  defBuff: 0.25 },   // defensive parry
       { name: "River Sweep",             dmgMult: 1.75 },
       { name: "Torrential Barrage",      dmgMult: 2.15 },
-      { name: "Whirlpool Kick",          dmgMult: 2.65 },
+      { name: "Whirlpool Kick",          dmgMult: 2.0,  dodgeBuff: 0.2  }, // evasive kick
       { name: "Tidal Surge",             dmgMult: 3.25 },
       { name: "Raging Flood",            dmgMult: 3.95 },
-      { name: "Deluge Palm",             dmgMult: 4.8  },
+      { name: "Iron Current",            dmgMult: 3.5,  defBuff: 0.35  },  // ironclad stance
       { name: "Primordial Tidal Wave",   dmgMult: 5.9  },
     ],
   },

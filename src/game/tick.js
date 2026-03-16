@@ -19,11 +19,13 @@ export function gameTick(prev) {
     ...prev,
     mats: { ...prev.mats },
     skills: { ...(prev.skills || {}) },
-    martialSkills: { ...(prev.martialSkills || { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } }) },
-    essenceSkills: { ...(prev.essenceSkills || { essenceStrike: { level: 1, exp: 0, expToNext: 60 } }) },
+    martialSkills: { ...(prev.martialSkills || { basicMartialArts: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] } }) },
+    essenceSkills: { ...(prev.essenceSkills || { essenceStrike: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] } }) },
     essenceCooldowns: { ...(prev.essenceCooldowns || {}) },
-    equippedMartialSkills: (prev.equippedMartialSkills || ["basicMartialArts"]).slice(),
-    equippedEssenceSkills: (prev.equippedEssenceSkills || ["essenceStrike"]).slice(),
+    martialMontages: { ...(prev.martialMontages || {}) },
+    essenceMontages: { ...(prev.essenceMontages || {}) },
+    equippedMartialSkills: (prev.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }]).slice(),
+    equippedEssenceSkills: (prev.equippedEssenceSkills || [{ schoolId: "essenceStrike", techIdx: 0 }]).slice(),
     hiredWorkers: { ...prev.hiredWorkers },
     hireProgress: { ...prev.hireProgress },
     dailyIncome: prev.dailyIncome.slice(),
@@ -35,7 +37,75 @@ export function gameTick(prev) {
 
   // Ensure basicMartialArts always exists in martialSkills (defensive guard)
   if (!s.martialSkills.basicMartialArts) {
-    s.martialSkills.basicMartialArts = { level: 1, exp: 0, expToNext: 50 };
+    s.martialSkills.basicMartialArts = { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] };
+  }
+
+  // ═══ MONTAGE TIMERS ═══
+  // Martial montages
+  if (Object.keys(s.martialMontages).length > 0) {
+    const newMontages = { ...s.martialMontages };
+    Object.keys(newMontages).forEach(schoolId => {
+      newMontages[schoolId] -= 0.5;
+      if (newMontages[schoolId] <= 0) {
+        const def = MARTIAL_SKILLS[schoolId];
+        const school = s.martialSkills[schoolId];
+        if (def && school) {
+          const oldIdx = school.activeTechIdx;
+          const newIdx = oldIdx + 1;
+          if (newIdx < def.levels.length) {
+            const newExpToNext = Math.floor((def.expBase || 50) * Math.pow(1.3, newIdx));
+            const newTechLevels = [...school.techLevels];
+            newTechLevels[newIdx] = { level: 1, exp: 0, expToNext: newExpToNext };
+            s.martialSkills = {
+              ...s.martialSkills,
+              [schoolId]: { ...school, activeTechIdx: newIdx, techLevels: newTechLevels },
+            };
+            // Auto-advance any slot that was using the old technique to the new one
+            s.equippedMartialSkills = s.equippedMartialSkills.map(slot =>
+              (slot && slot.schoolId === schoolId && slot.techIdx === oldIdx)
+                ? { schoolId, techIdx: newIdx }
+                : slot
+            );
+            s.log = [...s.log.slice(-80), `⚡ Training complete! ${def.name}: ${def.levels[newIdx].name} (Lv.1)`];
+          }
+        }
+        delete newMontages[schoolId];
+      }
+    });
+    s.martialMontages = newMontages;
+  }
+  // Essence montages
+  if (Object.keys(s.essenceMontages).length > 0) {
+    const newMontages = { ...s.essenceMontages };
+    Object.keys(newMontages).forEach(schoolId => {
+      newMontages[schoolId] -= 0.5;
+      if (newMontages[schoolId] <= 0) {
+        const def = ESSENCE_SKILLS[schoolId];
+        const school = s.essenceSkills[schoolId];
+        if (def && school) {
+          const oldIdx = school.activeTechIdx;
+          const newIdx = oldIdx + 1;
+          if (newIdx < def.levels.length) {
+            const newExpToNext = Math.floor((def.expBase || 60) * Math.pow(1.3, newIdx));
+            const newTechLevels = [...school.techLevels];
+            newTechLevels[newIdx] = { level: 1, exp: 0, expToNext: newExpToNext };
+            s.essenceSkills = {
+              ...s.essenceSkills,
+              [schoolId]: { ...school, activeTechIdx: newIdx, techLevels: newTechLevels },
+            };
+            s.equippedEssenceSkills = s.equippedEssenceSkills.map(slot =>
+              (slot && slot.schoolId === schoolId && slot.techIdx === oldIdx)
+                ? { schoolId, techIdx: newIdx }
+                : slot
+            );
+            s.essenceCooldowns = { ...(s.essenceCooldowns || {}), [schoolId]: 0 };
+            s.log = [...s.log.slice(-80), `⚡ Training complete! ${def.name}: ${def.levels[newIdx].name} (Lv.1)`];
+          }
+        }
+        delete newMontages[schoolId];
+      }
+    });
+    s.essenceMontages = newMontages;
   }
 
   if (s.incursionWon) return s;
@@ -291,37 +361,50 @@ export function gameTick(prev) {
     const mon = s.currentMonster;
 
     // ── MARTIAL SKILLS: all equipped slots fire in sequence (combo) ──
-    const equippedMartial = s.equippedMartialSkills || ["basicMartialArts"];
+    const equippedMartial = s.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }];
     let totalMartialDmg = 0;
     const martialHits = [];
+    let roundDefBonus = 0;   // accumulated from defensive techniques this round
+    let roundDodgeBonus = 0; // accumulated from evasive techniques this round
 
-    equippedMartial.forEach((skillId, idx) => {
-      const def = MARTIAL_SKILLS[skillId];
-      const st = (s.martialSkills || {})[skillId];
-      if (!def || !st) return;
-      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+    equippedMartial.forEach((slot, idx) => {
+      if (!slot) return;
+      const { schoolId, techIdx } = slot;
+      const def = MARTIAL_SKILLS[schoolId];
+      const school = (s.martialSkills || {})[schoolId];
+      if (!def || !school) return;
+      const lvData = def.levels[techIdx];
+      if (!lvData) return;
       const comboMult = 1 + idx * 0.3; // +30% per successive hit in combo
       let dmg = Math.floor(getAtk(s) * lvData.dmgMult * comboMult);
       const dodged = Math.random() * 100 < (mon.dodge || 0);
       if (dodged) dmg = 0;
-      else dmg = Math.max(1, dmg - (mon.def || 0));
+      else dmg = Math.max(lvData.dmgMult > 0 ? 1 : 0, dmg - (mon.def || 0));
       totalMartialDmg += dmg;
-      martialHits.push({ name: lvData.name, dmg, dodged });
+      martialHits.push({ name: lvData.name, dmg, dodged, defBuff: lvData.defBuff, dodgeBuff: lvData.dodgeBuff });
+      if (lvData.defBuff) roundDefBonus += lvData.defBuff;
+      if (lvData.dodgeBuff) roundDodgeBonus += lvData.dodgeBuff;
 
-      // Martial skill exp
-      const ms = { ...(s.martialSkills[skillId] || { level: 1, exp: 0, expToNext: def.expBase || 50 }) };
-      ms.exp += 1;
-      if (ms.exp >= ms.expToNext) {
-        if (ms.level < def.levels.length) {
-          ms.level += 1;
-          ms.exp = 0;
-          ms.expToNext = Math.floor(ms.expToNext * 1.5);
-          s.log = [...s.log.slice(-80), `⬆ ${def.name} → ${def.levels[ms.level - 1].name} (Lv.${ms.level})`];
+      // Martial skill sub-level exp (per-technique, 5 sub-levels before montage)
+      const techLevels = [...(school.techLevels || [])];
+      const tl = techLevels[techIdx] ? { ...techLevels[techIdx] } : { level: 1, exp: 0, expToNext: def.expBase || 50 };
+      const isActiveTech = school.activeTechIdx === techIdx;
+      const alreadyMastered = school.activeTechIdx > techIdx;
+      const montageRunning = !!(s.martialMontages || {})[schoolId];
+
+      tl.exp += 1;
+      if (tl.exp >= tl.expToNext) {
+        if (tl.level < 5 || alreadyMastered) {
+          // Normal level up, or past-level-5 leveling on a mastered/re-slotted technique
+          tl.level += 1;
+          tl.exp = 0;
         } else {
-          ms.exp = ms.expToNext;
+          // At level 5 on active tech — cap exp, wait for montage
+          tl.exp = tl.expToNext;
         }
       }
-      s.martialSkills = { ...s.martialSkills, [skillId]: ms };
+      techLevels[techIdx] = tl;
+      s.martialSkills = { ...s.martialSkills, [schoolId]: { ...school, techLevels } };
     });
 
     s.monsterHp -= totalMartialDmg;
@@ -337,13 +420,16 @@ export function gameTick(prev) {
 
     // ── ESSENCE SKILLS: auto-trigger by condition ──
     const equippedEssence = s.equippedEssenceSkills || [];
-    equippedEssence.forEach(skillId => {
-      const def = ESSENCE_SKILLS[skillId];
-      const st = (s.essenceSkills || {})[skillId];
-      if (!def || !st) return;
-      const lvData = def.levels[Math.min((st.level || 1) - 1, def.levels.length - 1)];
+    equippedEssence.forEach(slot => {
+      if (!slot) return;
+      const { schoolId, techIdx } = slot;
+      const def = ESSENCE_SKILLS[schoolId];
+      const school = (s.essenceSkills || {})[schoolId];
+      if (!def || !school) return;
+      const lvData = def.levels[techIdx];
+      if (!lvData) return;
       const trigger = lvData.trigger;
-      const cdLeft = (s.essenceCooldowns || {})[skillId] || 0;
+      const cdLeft = (s.essenceCooldowns || {})[schoolId] || 0;
 
       let shouldFire = false;
       if (trigger.type === "cooldown" && cdLeft <= 0) shouldFire = true;
@@ -352,7 +438,7 @@ export function gameTick(prev) {
       if (shouldFire && s.combatEnergy >= lvData.energyCost) {
         s.combatEnergy -= lvData.energyCost;
         const newCd = trigger.type === "cooldown" ? trigger.seconds : (trigger.cooldown || 4);
-        s.essenceCooldowns = { ...(s.essenceCooldowns || {}), [skillId]: newCd };
+        s.essenceCooldowns = { ...(s.essenceCooldowns || {}), [schoolId]: newCd };
 
         if (lvData.healPct) {
           const heal = Math.floor(s.maxHp * lvData.healPct);
@@ -367,21 +453,24 @@ export function gameTick(prev) {
           s.combatLog = [...s.combatLog.slice(-11), dodged ? `✦ ${lvData.name} — dodged!` : `✦ ${lvData.name}: ${dmg} dmg`];
         }
 
-        // Essence skill exp
-        const es = { ...(s.essenceSkills[skillId] || { level: 1, exp: 0, expToNext: def.expBase || 60 }) };
-        es.exp += 1;
-        if (es.exp >= es.expToNext) {
-          if (es.level < def.levels.length) {
-            const prevName = def.levels[es.level - 1].name;
-            es.level += 1;
-            es.exp = 0;
-            es.expToNext = Math.floor(es.expToNext * 1.5);
-            s.log = [...s.log.slice(-80), `⬆ ${def.name} → ${def.levels[es.level - 1].name} (Lv.${es.level})`];
+        // Essence skill sub-level exp (same 5-level system)
+        const techLevels = [...(school.techLevels || [])];
+        const tl = techLevels[techIdx] ? { ...techLevels[techIdx] } : { level: 1, exp: 0, expToNext: def.expBase || 60 };
+        const isActiveTech = school.activeTechIdx === techIdx;
+        const alreadyMastered = school.activeTechIdx > techIdx;
+        const montageRunning = !!(s.essenceMontages || {})[schoolId];
+
+        tl.exp += 1;
+        if (tl.exp >= tl.expToNext) {
+          if (tl.level < 5 || alreadyMastered) {
+            tl.level += 1;
+            tl.exp = 0;
           } else {
-            es.exp = es.expToNext;
+            tl.exp = tl.expToNext;
           }
         }
-        s.essenceSkills = { ...s.essenceSkills, [skillId]: es };
+        techLevels[techIdx] = tl;
+        s.essenceSkills = { ...s.essenceSkills, [schoolId]: { ...school, techLevels } };
       }
     });
 
@@ -400,10 +489,12 @@ export function gameTick(prev) {
       }
     });
 
-    // Monster martial attack
+    // Monster martial attack (roundDefBonus/roundDodgeBonus from defensive techniques this round)
     s.monsterEssenceCd = Math.max(0, (s.monsterEssenceCd || 0) - 1.5);
-    if (Math.random() * 100 > getDodge(s)) {
-      let monDmg = Math.max(1, mon.dmg - getDef(s));
+    const effectiveDodge = getDodge(s) + roundDodgeBonus * 100;
+    if (Math.random() * 100 > effectiveDodge) {
+      const bonusDef = Math.round(getDef(s) * roundDefBonus);
+      let monDmg = Math.max(1, mon.dmg - getDef(s) - bonusDef);
       const blocked = s.shield;
       if (s.shield) { monDmg = Math.floor(monDmg * 0.2); s.shield = false; }
       s.hp -= monDmg;

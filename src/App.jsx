@@ -50,17 +50,75 @@ const ACTIVITY_LABELS = { idle: "Idle", dungeon: "Dungeon", meditating: "Meditat
 
 // Migrate old saves to new skill system
 function migrateState(s) {
+  // --- Martial skills: migrate flat { level, exp, expToNext } → { activeTechIdx, techLevels[] }
   if (!s.martialSkills) {
-    s.martialSkills = { basicMartialArts: { level: 1, exp: 0, expToNext: 50 } };
-    s.equippedMartialSkills = ["basicMartialArts"];
+    s.martialSkills = { basicMartialArts: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 50 }] } };
+    s.equippedMartialSkills = [{ schoolId: "basicMartialArts", techIdx: 0 }];
     s.martialSlots = 1;
+  } else {
+    const newMartial = {};
+    Object.keys(s.martialSkills).forEach(schoolId => {
+      const old = s.martialSkills[schoolId];
+      if (old.activeTechIdx !== undefined) {
+        newMartial[schoolId] = old; // already new format
+      } else {
+        // Old format: level = technique stage (1-based), convert to new
+        const def = MARTIAL_SKILLS[schoolId];
+        const expBase = def?.expBase || 50;
+        const techIdx = Math.max(0, (old.level || 1) - 1);
+        const techLevels = [];
+        for (let i = 0; i < techIdx; i++) {
+          techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+        }
+        techLevels.push({ level: Math.min(5, old.level || 1), exp: old.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+        newMartial[schoolId] = { activeTechIdx: techIdx, techLevels };
+      }
+    });
+    s.martialSkills = newMartial;
   }
+  // Migrate equippedMartialSkills string[] → { schoolId, techIdx }[]
+  if (!s.equippedMartialSkills || (s.equippedMartialSkills.length > 0 && typeof s.equippedMartialSkills[0] === 'string')) {
+    const src = s.equippedMartialSkills || ["basicMartialArts"];
+    s.equippedMartialSkills = src.filter(Boolean).map(schoolId => ({
+      schoolId, techIdx: s.martialSkills[schoolId]?.activeTechIdx || 0,
+    }));
+  }
+  if (!s.martialMontages) s.martialMontages = {};
+
+  // --- Essence skills: same migration
   if (!s.essenceSkills) {
-    s.essenceSkills = { essenceStrike: { level: 1, exp: 0, expToNext: 60 } };
-    s.equippedEssenceSkills = ["essenceStrike"];
+    s.essenceSkills = { essenceStrike: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: 60 }] } };
+    s.equippedEssenceSkills = [{ schoolId: "essenceStrike", techIdx: 0 }];
     s.essenceSlots = 1;
     s.essenceCooldowns = { essenceStrike: 0 };
+  } else {
+    const newEssence = {};
+    Object.keys(s.essenceSkills).forEach(schoolId => {
+      const old = s.essenceSkills[schoolId];
+      if (old.activeTechIdx !== undefined) {
+        newEssence[schoolId] = old;
+      } else {
+        const def = ESSENCE_SKILLS[schoolId];
+        const expBase = def?.expBase || 60;
+        const techIdx = Math.max(0, (old.level || 1) - 1);
+        const techLevels = [];
+        for (let i = 0; i < techIdx; i++) {
+          techLevels.push({ level: 5, exp: 0, expToNext: Math.floor(expBase * Math.pow(1.3, i)) });
+        }
+        techLevels.push({ level: Math.min(5, old.level || 1), exp: old.exp || 0, expToNext: Math.floor(expBase * Math.pow(1.3, techIdx)) });
+        newEssence[schoolId] = { activeTechIdx: techIdx, techLevels };
+      }
+    });
+    s.essenceSkills = newEssence;
   }
+  if (!s.equippedEssenceSkills || (s.equippedEssenceSkills.length > 0 && typeof s.equippedEssenceSkills[0] === 'string')) {
+    const src = s.equippedEssenceSkills || ["essenceStrike"];
+    s.equippedEssenceSkills = src.filter(Boolean).map(schoolId => ({
+      schoolId, techIdx: s.essenceSkills[schoolId]?.activeTechIdx || 0,
+    }));
+  }
+  if (!s.essenceMontages) s.essenceMontages = {};
+
   // Clean up removed old-system fields
   if (s.skills) {
     ["basicAttack", "powerStrike", "manaShield", "flameBurst"].forEach(k => delete s.skills[k]);
@@ -575,15 +633,18 @@ export default function App() {
                     {/* ROW 6 — Martial skill */}
                     <div style={{ ...cell("#181838", "#1a3a5e") }}>
                       <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>⚔ Martial</div>
-                      {(gs.equippedMartialSkills || ["basicMartialArts"]).map((id, i) => {
-                        const def = MARTIAL_SKILLS[id];
-                        const st = (gs.martialSkills || {})[id] || { level: 1 };
-                        if (!def) return null;
-                        const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
+                      {(gs.equippedMartialSkills || []).map((slot, i) => {
+                        if (!slot) return null;
+                        const def = MARTIAL_SKILLS[slot.schoolId];
+                        const school = (gs.martialSkills || {})[slot.schoolId];
+                        if (!def || !school) return null;
+                        const tl = (school.techLevels || [])[slot.techIdx];
+                        const lvData = def.levels[slot.techIdx];
+                        if (!lvData) return null;
                         return (
-                          <div key={id} style={{ fontSize: 8, color: "#f80" }}>
-                            {def.icon} {def.levels[lv].name}
-                            <span style={{ color: "#bbccee", marginLeft: 3 }}>Lv.{st.level || 1}</span>
+                          <div key={i} style={{ fontSize: 8, color: "#f80" }}>
+                            {def.icon} {lvData.name}
+                            <span style={{ color: "#bbccee", marginLeft: 3 }}>Lv.{tl?.level || 1}</span>
                             {i > 0 && <span style={{ color: "#99aacc", marginLeft: 3 }}>+{i * 30}%</span>}
                           </div>
                         );
@@ -601,15 +662,17 @@ export default function App() {
                       <div style={{ fontSize: 7, color: "#8899cc", marginBottom: 2, textTransform: "uppercase", letterSpacing: 0.5 }}>✦ Essence</div>
                       {(gs.equippedEssenceSkills || []).length === 0
                         ? <div style={{ fontSize: 7, color: "#556" }}>No skill equipped</div>
-                        : (gs.equippedEssenceSkills || []).map(id => {
-                            const def = ESSENCE_SKILLS[id];
-                            const st = (gs.essenceSkills || {})[id] || { level: 1 };
-                            if (!def) return null;
-                            const lv = Math.min((st.level || 1) - 1, def.levels.length - 1);
-                            const cd = (gs.essenceCooldowns || {})[id] || 0;
+                        : (gs.equippedEssenceSkills || []).map((slot, i) => {
+                            if (!slot) return null;
+                            const def = ESSENCE_SKILLS[slot.schoolId];
+                            const school = (gs.essenceSkills || {})[slot.schoolId];
+                            if (!def || !school) return null;
+                            const lvData = def.levels[slot.techIdx];
+                            const cd = (gs.essenceCooldowns || {})[slot.schoolId] || 0;
+                            if (!lvData) return null;
                             return (
-                              <div key={id} style={{ fontSize: 8, color: "#a6f" }}>
-                                {def.icon} {def.levels[lv].name}
+                              <div key={i} style={{ fontSize: 8, color: "#a6f" }}>
+                                {def.icon} {lvData.name}
                                 <span style={{ marginLeft: 3, color: cd > 0 ? "#f80" : "#4a4" }}>
                                   {cd > 0 ? `⏳${cd.toFixed(1)}s` : "✓"}
                                 </span>
@@ -1102,22 +1165,52 @@ export default function App() {
 
                 {/* Combat skills summary */}
                 {(() => {
-                  const extraMartial = Object.keys(gs.martialSkills || {}).filter(id => id !== "basicMartialArts");
+                  const allMartial = Object.keys(gs.martialSkills || {});
                   const allEssence = Object.keys(gs.essenceSkills || {});
                   const passives = Object.keys(gs.skills || {});
-                  if (extraMartial.length + allEssence.length + passives.length === 0) return null;
+                  if (allMartial.length + allEssence.length + passives.length === 0) return null;
                   return (
                     <div>
                       <div style={{ fontSize: 8, color: "#a6f", marginBottom: 3 }}>📜 Combat Skills</div>
-                      {[...extraMartial.map(id => ({ id, def: MARTIAL_SKILLS[id], st: (gs.martialSkills || {})[id], color: "#f80" })),
-                        ...allEssence.map(id => ({ id, def: ESSENCE_SKILLS[id], st: (gs.essenceSkills || {})[id], color: "#a6f" })),
-                        ...passives.map(id => ({ id, def: SKILL_DEFINITIONS[id], st: (gs.skills || {})[id], color: "#8af" })),
-                      ].map(({ id, def, st, color }) => def && st ? (
-                        <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
-                          <span style={{ fontSize: 9, color }}>{def.icon} {def.name}</span>
-                          <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{st.level}</span>
-                        </div>
-                      ) : null)}
+                      {allMartial.map(schoolId => {
+                        const def = MARTIAL_SKILLS[schoolId];
+                        const school = (gs.martialSkills || {})[schoolId];
+                        if (!def || !school) return null;
+                        const techIdx = school.activeTechIdx || 0;
+                        const tl = (school.techLevels || [])[techIdx] || { level: 1 };
+                        const techName = def.levels[techIdx]?.name || def.name;
+                        return (
+                          <div key={schoolId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                            <span style={{ fontSize: 9, color: "#f80" }}>{def.icon} {techName}</span>
+                            <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{tl.level}/5</span>
+                          </div>
+                        );
+                      })}
+                      {allEssence.map(schoolId => {
+                        const def = ESSENCE_SKILLS[schoolId];
+                        const school = (gs.essenceSkills || {})[schoolId];
+                        if (!def || !school) return null;
+                        const techIdx = school.activeTechIdx || 0;
+                        const tl = (school.techLevels || [])[techIdx] || { level: 1 };
+                        const techName = def.levels[techIdx]?.name || def.name;
+                        return (
+                          <div key={schoolId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                            <span style={{ fontSize: 9, color: "#a6f" }}>{def.icon} {techName}</span>
+                            <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{tl.level}/5</span>
+                          </div>
+                        );
+                      })}
+                      {passives.map(id => {
+                        const def = SKILL_DEFINITIONS[id];
+                        const st = (gs.skills || {})[id];
+                        if (!def || !st) return null;
+                        return (
+                          <div key={id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "2px 0", borderBottom: "1px solid #2c2c48" }}>
+                            <span style={{ fontSize: 9, color: "#8af" }}>{def.icon} {def.name}</span>
+                            <span style={{ fontSize: 8, color: "#bbccee" }}>Lv.{st.level}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })()}
@@ -1230,7 +1323,7 @@ export default function App() {
                       {owned ? <span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>
                         : <Btn onClick={() => purchase(def?.name, m.cost, m.mats, s => ({
                             ...s,
-                            martialSkills: { ...(s.martialSkills || {}), [m.skill]: { level: 1, exp: 0, expToNext: def?.expBase || 60 } },
+                            martialSkills: { ...(s.martialSkills || {}), [m.skill]: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: def?.expBase || 60 }] } },
                           }))} disabled={!canAfford(m.cost, m.mats)} small color="#f80">{m.cost}g</Btn>}
                     </div>
                   );
@@ -1250,7 +1343,7 @@ export default function App() {
                       {owned ? <span style={{ fontSize: 8, color: "#4a4" }}>✓ Learned</span>
                         : <Btn onClick={() => purchase(def?.name, m.cost, m.mats, s => ({
                             ...s,
-                            essenceSkills: { ...(s.essenceSkills || {}), [m.skill]: { level: 1, exp: 0, expToNext: def?.expBase || 70 } },
+                            essenceSkills: { ...(s.essenceSkills || {}), [m.skill]: { activeTechIdx: 0, techLevels: [{ level: 1, exp: 0, expToNext: def?.expBase || 70 }] } },
                             essenceCooldowns: { ...(s.essenceCooldowns || {}), [m.skill]: 0 },
                           }))} disabled={!canAfford(m.cost, m.mats)} small color="#a6f">{m.cost}g</Btn>}
                     </div>
@@ -1301,30 +1394,53 @@ export default function App() {
               {/* ── MARTIAL SKILLS ── */}
               {(() => {
                 const slots = gs.martialSlots || 1;
-                const equipped = gs.equippedMartialSkills || ["basicMartialArts"];
-                const ownedMartial = Object.keys(gs.martialSkills || { basicMartialArts: {} });
+                const equipped = gs.equippedMartialSkills || [{ schoolId: "basicMartialArts", techIdx: 0 }];
+                // Collect all unlocked (schoolId, techIdx) pairs from all schools
+                const allAvailableTechs = [];
+                Object.keys(gs.martialSkills || {}).forEach(schoolId => {
+                  const school = gs.martialSkills[schoolId];
+                  (school.techLevels || []).forEach((_, techIdx) => {
+                    allAvailableTechs.push({ schoolId, techIdx });
+                  });
+                });
                 return (
                   <Sec title={`⚔️ Martial Skills (${equipped.length}/${slots})`} color="#f80">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>All equipped slots fire every round — later hits get a combo bonus.</div>
                     {Array.from({ length: slots }).map((_, slotIdx) => {
-                      const skillId = equipped[slotIdx];
-                      const def = skillId ? MARTIAL_SKILLS[skillId] : null;
-                      const st = skillId ? ((gs.martialSkills || {})[skillId] || { level: 1, exp: 0, expToNext: 50 }) : null;
-                      if (!def || !st) return (
+                      const slot = equipped[slotIdx];
+                      const def = slot ? MARTIAL_SKILLS[slot.schoolId] : null;
+                      const school = slot ? (gs.martialSkills || {})[slot.schoolId] : null;
+                      const tl = (school?.techLevels || [])[slot?.techIdx];
+                      if (!def || !school || !tl) return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
                           <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
                           <span style={{ fontSize: 9, color: "#8899cc", flex: 1 }}>— Empty —</span>
                           <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#f80" small>🛒 Shop</Btn>
                         </div>
                       );
-                      const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
-                      const lvData = def.levels[lvIdx];
+                      const lvData = def.levels[slot.techIdx];
                       const comboBonus = slotIdx > 0 ? `+${slotIdx * 30}% combo` : "lead hit";
+                      const isActiveTech = school.activeTechIdx === slot.techIdx;
+                      const alreadyMastered = school.activeTechIdx > slot.techIdx;
+                      const montageTimer = (gs.martialMontages || {})[slot.schoolId];
+                      const montageRunning = montageTimer != null && montageTimer > 0;
+                      const montageReady = isActiveTech && tl.level >= 5 && !montageRunning
+                        && slot.techIdx < def.levels.length - 1;
+
+                      // Build effect label
+                      const effectParts = [];
+                      if (lvData.dmgMult) effectParts.push(`base dmg x${lvData.dmgMult}`);
+                      if (lvData.defBuff) effectParts.push(`+${Math.round(lvData.defBuff * 100)}% def`);
+                      if (lvData.dodgeBuff) effectParts.push(`+${Math.round(lvData.dodgeBuff * 100)}% dodge`);
+
                       function cycleMartial() {
-                        const cur = ownedMartial.indexOf(skillId);
-                        const next = ownedMartial[(cur + 1) % ownedMartial.length];
+                        const cur = allAvailableTechs.findIndex(t => t.schoolId === slot.schoolId && t.techIdx === slot.techIdx);
+                        const next = allAvailableTechs[(cur + 1) % allAvailableTechs.length];
                         const newEq = [...equipped]; newEq[slotIdx] = next;
                         setGs(p => ({ ...p, equippedMartialSkills: newEq }));
+                      }
+                      function startMontage() {
+                        setGs(p => ({ ...p, martialMontages: { ...(p.martialMontages || {}), [slot.schoolId]: 5 } }));
                       }
                       return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
@@ -1332,11 +1448,20 @@ export default function App() {
                           <div style={{ flex: 1 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <span style={{ color: "#f80", fontWeight: 700, fontSize: 10 }}>{def.icon} {lvData.name}</span>
-                              <span style={{ fontSize: 7, color: "#8899cc" }}>{comboBonus} · x{lvData.dmgMult} · Lv.{st.level}</span>
+                              <span style={{ fontSize: 7, color: "#8899cc" }}>
+                                {comboBonus} · {effectParts.join(' · ')} · Lv.{tl.level}{tl.level <= 5 ? "/5" : ""}
+                              </span>
                             </div>
-                            <Bar value={st.exp} max={st.expToNext} color="#f80" h={4} />
+                            {montageRunning ? (
+                              <Bar value={montageTimer} max={5} color="#fc0" h={12}
+                                label={`⚡ Training... ${montageTimer.toFixed(1)}s`} />
+                            ) : montageReady ? (
+                              <Btn onClick={startMontage} color="#fc0" small>⚡ Start Training Montage!</Btn>
+                            ) : (
+                              <Bar value={tl.exp} max={tl.expToNext} color={alreadyMastered ? "#888" : "#f80"} h={6} />
+                            )}
                           </div>
-                          {ownedMartial.length > 1 && <Btn onClick={cycleMartial} color="#bbccee" small>⟳</Btn>}
+                          {allAvailableTechs.length > 1 && <Btn onClick={cycleMartial} color="#bbccee" small>⟳</Btn>}
                         </div>
                       );
                     })}
@@ -1344,11 +1469,22 @@ export default function App() {
                       const sc = MARTIAL_SLOT_COSTS[slots - 1];
                       return sc ? (
                         <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
-                          <Btn onClick={() => purchase("Martial Seal Breaker", sc.cost, sc.mats, s => ({
-                            ...s,
-                            martialSlots: (s.martialSlots || 1) + 1,
-                            equippedMartialSkills: [...(s.equippedMartialSkills || ["basicMartialArts"]), "basicMartialArts"],
-                          }))} disabled={!canAfford(sc.cost, sc.mats)} color="#fc0" small>
+                          <Btn onClick={() => purchase("Martial Seal Breaker", sc.cost, sc.mats, s => {
+                            // Find lowest unlocked technique not already in a slot
+                            const allTechs = [];
+                            Object.keys(s.martialSkills || {}).forEach(schoolId => {
+                              (s.martialSkills[schoolId].techLevels || []).forEach((_, techIdx) => {
+                                allTechs.push({ schoolId, techIdx });
+                              });
+                            });
+                            const current = (s.equippedMartialSkills || []).map(sl => `${sl.schoolId}-${sl.techIdx}`);
+                            const newSlot = allTechs.find(t => !current.includes(`${t.schoolId}-${t.techIdx}`)) || allTechs[0] || { schoolId: "basicMartialArts", techIdx: 0 };
+                            return {
+                              ...s,
+                              martialSlots: (s.martialSlots || 1) + 1,
+                              equippedMartialSkills: [...(s.equippedMartialSkills || []), newSlot],
+                            };
+                          })} disabled={!canAfford(sc.cost, sc.mats)} color="#fc0" small>
                             🔓 Open Slot — {sc.cost}g
                           </Btn>
                           <MatCost mats={sc.mats} state={gs} />
@@ -1363,31 +1499,50 @@ export default function App() {
               {(() => {
                 const slots = gs.essenceSlots || 1;
                 const equipped = gs.equippedEssenceSkills || [];
-                const ownedEssence = Object.keys(gs.essenceSkills || { essenceStrike: {} });
+                const allAvailableEssence = [];
+                Object.keys(gs.essenceSkills || {}).forEach(schoolId => {
+                  const school = gs.essenceSkills[schoolId];
+                  (school.techLevels || []).forEach((_, techIdx) => {
+                    allAvailableEssence.push({ schoolId, techIdx });
+                  });
+                });
                 return (
                   <Sec title={`✦ Essence Skills (${equipped.length}/${slots})`} color="#a6f">
                     <div style={{ fontSize: 8, color: "#99aacc", marginBottom: 5 }}>Auto-trigger when conditions are met. Drain combat energy.</div>
                     {Array.from({ length: slots }).map((_, slotIdx) => {
-                      const skillId = equipped[slotIdx];
-                      const def = skillId ? ESSENCE_SKILLS[skillId] : null;
-                      const st = skillId ? ((gs.essenceSkills || {})[skillId] || { level: 1, exp: 0, expToNext: 60 }) : null;
-                      if (!def || !st) return (
+                      const slot = equipped[slotIdx];
+                      const def = slot ? ESSENCE_SKILLS[slot.schoolId] : null;
+                      const school = slot ? (gs.essenceSkills || {})[slot.schoolId] : null;
+                      const tl = (school?.techLevels || [])[slot?.techIdx];
+                      if (!def || !school || !tl) return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0", borderBottom: "1px solid #2c2c48", marginBottom: 3 }}>
                           <span style={{ fontSize: 8, color: "#bbccee", width: 14 }}>#{slotIdx + 1}</span>
                           <span style={{ fontSize: 9, color: "#8899cc", flex: 1 }}>— Empty —</span>
                           <Btn onClick={() => setGs(p => ({ ...p, tab: "shop" }))} color="#a6f" small>🛒 Shop</Btn>
                         </div>
                       );
-                      const lvIdx = Math.min((st.level || 1) - 1, def.levels.length - 1);
-                      const lvData = def.levels[lvIdx];
+                      const lvData = def.levels[slot.techIdx];
                       const t = lvData.trigger;
                       const triggerDesc = t.type === "cooldown" ? `every ${t.seconds}s` : `HP < ${Math.round(t.threshold * 100)}%`;
-                      const cd = (gs.essenceCooldowns || {})[skillId] || 0;
+                      const isActiveTech = school.activeTechIdx === slot.techIdx;
+                      const alreadyMastered = school.activeTechIdx > slot.techIdx;
+                      const montageTimer = (gs.essenceMontages || {})[slot.schoolId];
+                      const montageRunning = montageTimer != null && montageTimer > 0;
+                      const montageReady = isActiveTech && tl.level >= 5 && !montageRunning
+                        && slot.techIdx < def.levels.length - 1;
+
+                      const effectLabel = lvData.dmgMult
+                        ? `base dmg x${lvData.dmgMult}`
+                        : lvData.healPct ? `+${Math.round(lvData.healPct * 100)}% HP` : "";
+
                       function cycleEssence() {
-                        const cur = ownedEssence.indexOf(skillId);
-                        const next = ownedEssence[(cur + 1) % ownedEssence.length];
+                        const cur = allAvailableEssence.findIndex(e => e.schoolId === slot.schoolId && e.techIdx === slot.techIdx);
+                        const next = allAvailableEssence[(cur + 1) % allAvailableEssence.length];
                         const newEq = [...equipped]; newEq[slotIdx] = next;
                         setGs(p => ({ ...p, equippedEssenceSkills: newEq }));
+                      }
+                      function startEssenceMontage() {
+                        setGs(p => ({ ...p, essenceMontages: { ...(p.essenceMontages || {}), [slot.schoolId]: 5 } }));
                       }
                       return (
                         <div key={slotIdx} style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 5 }}>
@@ -1396,20 +1551,19 @@ export default function App() {
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <span style={{ color: "#a6f", fontWeight: 700, fontSize: 10 }}>{def.icon} {lvData.name}</span>
                               <span style={{ fontSize: 7, color: "#8899cc" }}>
-                                {triggerDesc} · {lvData.energyCost}EN · Lv.{st.level}
+                                {triggerDesc} · {lvData.energyCost}EN · {effectLabel} · Lv.{tl.level}{tl.level <= 5 ? "/5" : ""}
                               </span>
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-                              <span style={{ fontSize: 7, color: cd > 0 ? "#f80" : "#4a4" }}>
-                                {cd > 0 ? `⏳ ${cd.toFixed(1)}s` : "✓ ready"}
-                              </span>
-                              <span style={{ fontSize: 7, color: "#ccddee" }}>
-                                {lvData.dmgMult ? `x${lvData.dmgMult} dmg` : lvData.healPct ? `+${Math.round(lvData.healPct * 100)}% HP` : ""}
-                              </span>
-                            </div>
-                            <Bar value={st.exp} max={st.expToNext} color="#a6f" h={4} />
+                            {montageRunning ? (
+                              <Bar value={montageTimer} max={5} color="#fc0" h={12}
+                                label={`⚡ Training... ${montageTimer.toFixed(1)}s`} />
+                            ) : montageReady ? (
+                              <Btn onClick={startEssenceMontage} color="#fc0" small>⚡ Start Training Montage!</Btn>
+                            ) : (
+                              <Bar value={tl.exp} max={tl.expToNext} color={alreadyMastered ? "#888" : "#a6f"} h={6} />
+                            )}
                           </div>
-                          {ownedEssence.length > 1 && <Btn onClick={cycleEssence} color="#bbccee" small>⟳</Btn>}
+                          {allAvailableEssence.length > 1 && <Btn onClick={cycleEssence} color="#bbccee" small>⟳</Btn>}
                         </div>
                       );
                     })}
@@ -1417,11 +1571,21 @@ export default function App() {
                       const sc = ESSENCE_SLOT_COSTS[slots - 1];
                       return sc ? (
                         <div style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #363658" }}>
-                          <Btn onClick={() => purchase("Essence Seal Breaker", sc.cost, sc.mats, s => ({
-                            ...s,
-                            essenceSlots: (s.essenceSlots || 1) + 1,
-                            equippedEssenceSkills: [...(s.equippedEssenceSkills || []), "essenceStrike"],
-                          }))} disabled={!canAfford(sc.cost, sc.mats)} color="#a6f" small>
+                          <Btn onClick={() => purchase("Essence Seal Breaker", sc.cost, sc.mats, s => {
+                            const allTechs = [];
+                            Object.keys(s.essenceSkills || {}).forEach(schoolId => {
+                              (s.essenceSkills[schoolId].techLevels || []).forEach((_, techIdx) => {
+                                allTechs.push({ schoolId, techIdx });
+                              });
+                            });
+                            const current = (s.equippedEssenceSkills || []).map(sl => `${sl.schoolId}-${sl.techIdx}`);
+                            const newSlot = allTechs.find(t => !current.includes(`${t.schoolId}-${t.techIdx}`)) || allTechs[0] || { schoolId: "essenceStrike", techIdx: 0 };
+                            return {
+                              ...s,
+                              essenceSlots: (s.essenceSlots || 1) + 1,
+                              equippedEssenceSkills: [...(s.equippedEssenceSkills || []), newSlot],
+                            };
+                          })} disabled={!canAfford(sc.cost, sc.mats)} color="#a6f" small>
                             🔓 Open Slot — {sc.cost}g
                           </Btn>
                           <MatCost mats={sc.mats} state={gs} />
